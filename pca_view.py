@@ -1738,8 +1738,8 @@ class QuitDialog(customtkinter.CTkToplevel):
         
         # Update label text if a project is open
         label_text = 'Do you want to save changes?'
-        if self.instance.controller.current_project:
-            label_text = f'Do you want to save changes to {os.path.basename(self.instance.controller.current_project)}?'
+        if self.instance.controller.project_name:
+            label_text = f'Do you want to save changes to {os.path.basename(self.instance.controller.project_name)}?'
         self.label = customtkinter.CTkLabel(self, text=label_text)
         self.label.pack(padx=10, pady=(10, 5))
 

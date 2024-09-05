@@ -1131,7 +1131,6 @@ class TrojePCA(SVD):
         return self.W_0, self.V, self.K, self.eigenvalues
 
     def transform_k_to_w(self, k):
-        print(f'self.V[-1, 0:2]: {self.V[-1, 0:2]}')
         return self.W_0.reshape(-1) + np.dot(k, self.V.T)
 
     def reconstruct(self, w, num_of_eigenposture_features, sample_freq, d_norm, weight_vec, coord_transform):

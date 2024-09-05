@@ -117,7 +117,8 @@ class Controller():
         self.svd_model = pca_model.SVD()
         self.view = PCA_View(self)
 
-        self.current_project = ''
+        self.project_dir = ''
+        self.project_name = ''
         self.data_file_path_list = []
         self.output_folder_path = ''
         self.current_subj = None
@@ -187,6 +188,11 @@ class Controller():
             'tooltips_checkbox': self.tooltips_checkbox
         }
 
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        #os.chdir(script_dir)  # Change the current working directory to the script directory
+        print(f'Current script_dir: {script_dir}')
+        print(f'Current Working Directory: {os.path.abspath(os.getcwd())}')
+
 
     def run_analysis(self):
         '''Executes PCA processing when 'Run PCA' button is pushed, running in a separate thread.'''
@@ -227,7 +233,7 @@ class Controller():
 
         # Save a copy of the project file to record the state of the app used to generate the output
         self.save_project_file(
-            f'{self.output_folder_path}/{os.path.basename(self.current_project).split(".")[0]}_metadata.txt'
+            f'{self.output_folder_path}/{os.path.basename(self.project_dir).split(".")[0]}_metadata.txt'
         )
 
 
@@ -468,7 +474,7 @@ class Controller():
 
 
     def check_ui_settings(self):
-        if not self.current_project:
+        if not self.project_dir:
             raise TerminatingError('Project must be saved before PCA can be run.')
 
         if not self.subj_pca_models:
@@ -500,9 +506,13 @@ class Controller():
 
         if not file_paths:
             file_paths = self.view._ask_open_filenames()
+            print(file_paths)
 
         if file_paths:
-            self.data_file_path_list = file_paths
+            if self.project_dir:
+                self.data_file_path_list = self.global_to_local(file_paths)
+            else:
+                self.data_file_path_list = file_paths
 
         if len(self.data_file_path_list) == 0:
             return
@@ -575,6 +585,10 @@ class Controller():
         return True
 
 
+    def global_to_local(self, global_file_paths):
+        return [os.path.relpath(path, self.project_dir) for path in global_file_paths]
+
+
     def save_project_file(self, save_path=None):
         '''
         Save the current project to a file.
@@ -582,18 +596,20 @@ class Controller():
         '''
 
         if not save_path:
-            if not self.current_project:
-                self.current_project = self.view._ask_save_as_filename()
-                if not self.current_project:
+            if not self.project_dir or not self.project_name:
+                project_file_path = self.view._ask_save_as_filename()
+                if not project_file_path:
                     return
                 
-                if not self.current_project.endswith('.pca'):
-                    self.current_project += '.pca'
+                if not project_file_path.endswith('.pca'):
+                    project_file_path += '.pca'
+
+                self.project_dir = os.path.dirname(project_file_path)
+                self.project_name = os.path.basename(project_file_path)
+
+            save_path = os.path.join(self.project_dir, self.project_name)
+            self.view.title(f'PMAnalyserPython [{self.project_name}]')
             
-            self.view.title(f'PMAnalyserPython [{self.current_project}]')
-
-            save_path = self.current_project
-
         # Gather project data into a dictionary
         project_dict = {}
         for key, value in self.save_configuration.items():
@@ -604,8 +620,8 @@ class Controller():
 
             project_dict[key] = value 
 
-        project_dict['current_project'] = self.current_project
-        project_dict['data_file_path_list'] = self.data_file_path_list
+        project_dict['project_name'] = self.project_name
+        project_dict['data_file_path_list'] = self.global_to_local(self.data_file_path_list)
         project_dict['subject_UI_settings_dict'] = {
                 key: {sub_key: sub_value.get() for sub_key, sub_value in value.subject_UI_settings.items()}
                 for key, value in self.subj_pca_models.items()
@@ -615,13 +631,12 @@ class Controller():
         project_dict['skeleton'] = self.view._get_table_values('skeleton')
         project_dict['colour'] = self.view._get_table_values('colour')
 
-
         with open(save_path, 'w') as project_file:
             project_file.write(json.dumps(project_dict, indent=2))
 
         self._sync_pca_with_ui()
 
-        print(f'PROJECT SAVED: {save_path}')
+        print(f'Project Saved: {save_path}')
 
 
     def load_project_file(self, project_to_open=''):
@@ -629,7 +644,7 @@ class Controller():
         Load a project from a file.
         If no file is specified, prompt the user to choose one.
         '''
-        if self.current_project:
+        if self.project_dir:
             self.view._on_closing(return_action=True)
 
         if not project_to_open:
@@ -641,11 +656,14 @@ class Controller():
             if not project_to_open.endswith('.pca'):
                 raise TerminatingError("Not a valid '.pca' project file")
     
-        self.current_project = project_to_open
-        self.view.title(f'PMAnalyserPython [{self.current_project}]')
-
+        self.project_dir = os.path.dirname(project_to_open)
+        self.project_name = os.path.basename(project_to_open)
+        self.view.title(f'PMAnalyserPython [{self.project_name}]')
+        os.chdir(self.project_dir)  # Switch to project's working directory for local paths
+        print(f'Working Directory: {self.project_dir}')
+        
         try:
-            with open(self.current_project, 'r') as project_file:
+            with open(self.project_name, 'r') as project_file:
                 loaded_project_dict = json.load(project_file)
         except json.JSONDecodeError as e:
             raise TerminatingError(f'Invalid JSON format: {e}')
@@ -698,7 +716,7 @@ class Controller():
         if self.subj_pca_models:
             self.view._update_subject_selection(list(self.subj_pca_models.keys())[0])
 
-        print(f'PROJECT LOADED: {self.current_project}')
+        print(f'Project Loaded: {self.project_name}')
 
 
     def save_data_bug_plot(self, df, subj_pca_model):
@@ -777,7 +795,7 @@ class Controller():
         if self.pca_mode_option_menu.get() == 'All Subjects Together':
             pca_mode_name_component = 'pca_all_together'
 
-        self.output_folder_path = f'{os.path.dirname(self.current_project)}/{os.path.basename(self.current_project).split(".")[0]}_{pca_mode_name_component}'
+        self.output_folder_path = f'{self.project_name.split(".")[0]}_{pca_mode_name_component}'
 
         for id, subj_pca_model in self.subj_pca_models.items():
             # Combine and deduplicate markers to be deleted
