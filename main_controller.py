@@ -22,15 +22,176 @@ These packages need to be installed via pip:
 import os
 from threading import Thread
 import json
-import tkinter
+import tkinter as tk
 import itertools
 import time
+import gc
+from dataclasses import dataclass, field, fields
+import re
 
 import pandas as pd
 import numpy as np
 
 import pca_model
-from pca_view import PCA_View, TerminatingError, string_to_list
+from pca_view import PCA_View, TerminatingError, Warning, isfloat, isposint
+
+@dataclass
+class Configuration:
+    pca_mode: tk.StringVar = field(default_factory=tk.StringVar)
+    delimiter: tk.StringVar = field(default_factory=tk.StringVar)
+    freq: tk.StringVar = field(default_factory=tk.StringVar)
+    del_rows: tk.StringVar = field(default_factory=tk.StringVar)
+    del_markers: tk.StringVar = field(default_factory=tk.StringVar)
+    gap_filling: tk.StringVar = field(default_factory=tk.StringVar)
+    data_filtering: tk.StringVar = field(default_factory=tk.StringVar)
+    centring: tk.StringVar = field(default_factory=tk.StringVar)
+    align_orientation: tk.StringVar = field(default_factory=tk.StringVar)
+    orientation_cutoff_freq: tk.StringVar = field(default_factory=tk.StringVar)
+    normalisation: tk.StringVar = field(default_factory=tk.StringVar)
+    weights_mode: tk.StringVar = field(default_factory=tk.StringVar)
+    coordinate_transformation: tk.StringVar = field(default_factory=tk.StringVar)
+    pp_filter: tk.StringVar = field(default_factory=tk.StringVar)
+    pv_filter: tk.StringVar = field(default_factory=tk.StringVar)
+    pa_filter: tk.StringVar = field(default_factory=tk.StringVar)
+    pm_filter_order: tk.StringVar = field(default_factory=tk.StringVar)
+    pm_filter_cut_off: tk.StringVar = field(default_factory=tk.StringVar)
+    loocv: tk.BooleanVar = field(default_factory=tk.BooleanVar)
+    freq_harmonics: tk.StringVar = field(default_factory=tk.StringVar)
+    plot_save_extension: tk.StringVar = field(default_factory=tk.StringVar)
+    ev_num_of_pcs: tk.StringVar = field(default_factory=tk.StringVar)
+    sine_approx: tk.BooleanVar = field(default_factory=tk.BooleanVar)
+    amp_factors: tk.StringVar = field(default_factory=tk.StringVar)
+    appearance_mode: tk.StringVar = field(default_factory=tk.StringVar)
+    scaling: tk.StringVar = field(default_factory=tk.StringVar)
+    tooltips: tk.BooleanVar = field(default_factory=tk.BooleanVar)
+
+    
+    @property
+    def get_delimiter(self):
+        value = self.delimiter.get()
+        if value:
+            if any(char.isdigit() for char in value):
+                raise TerminatingError(f"Invalid format in 'Delimiter' entry: '{value}'. Entry should not contain numbers.")
+            return value
+        return None
+    
+    @property
+    def get_freq(self):
+        value = self.freq.get()
+        if not isfloat(value):
+            raise TerminatingError(f"Sample Frequency '{value}' is not a valid number.")
+        value = float(value)
+        if value <= 0:
+            raise TerminatingError(f"Sample Frequency '{value}' must be positive.")
+        return value
+
+    @property
+    def get_del_rows(self):
+        value = self.del_rows.get()
+        if not _validate_index_string(value):
+            raise TerminatingError(f"Invalid format in 'Delete Rows' entry: '{value}'.")
+        return value
+    
+    @property
+    def get_del_markers(self):
+        value = self.del_markers.get()
+        if not _validate_index_string(value):
+            raise TerminatingError(f"Invalid format in 'Delete Markers' entry: '{value}'.")
+        return value
+    
+    @property
+    def get_orientation_cutoff_freq(self):
+        value = self.orientation_cutoff_freq.get()
+        if value:
+            if not isfloat(value):
+                raise TerminatingError(f"Orientation Cutoff Freq. '{value}' is not a valid number.")
+            value = float(value)
+            if value <= 0:
+                raise TerminatingError(f"Orientation Cutoff Freq. '{value}' must be positive.")
+            return value
+        return 0
+    
+    @property
+    def get_pm_filter_order(self):
+        value = self.pm_filter_order.get()
+        if value:
+            if not isposint(value):
+                raise TerminatingError(f"Invalid format in 'PM Filter Order' entry: '{value}'.")
+            return int(value)
+        return 0
+    
+    @property
+    def get_pm_filter_cut_off(self):
+        value = self.pm_filter_cut_off.get()
+        if value:
+            if value and not isposint(value):
+                raise TerminatingError(f"Invalid format in 'PM Filter Cutoff' entry: '{value}'.")
+            return int(value)
+        return 0
+    
+    @property
+    def get_ev_num_of_pcs(self):
+        value = self.ev_num_of_pcs.get()
+        if value:
+            if not isposint(value):
+                raise TerminatingError(f"Invalid format in 'Number of PCs to plot' entry: '{value}'.")
+            return int(value)
+        return 12  # Defaults to 12
+    
+    @property
+    def get_freq_harmonics(self):
+        value = self.freq_harmonics.get()
+        try:
+            value = string_to_list(value)
+        except Exception:
+            raise TerminatingError(f"Invalid format in 'Sine Approx. Freq. Ratios' entry: '{value}'.")
+        return value
+    
+    @property
+    def get_amp_factors(self):
+        value = self.amp_factors.get()
+        try:
+            value = string_to_list(value)
+        except Exception:
+            raise TerminatingError(f"Invalid format in 'PM Amplification Factors' entry '{value}'.")
+        return value
+
+
+    def set_all(self, dict):
+        for field in fields(self):
+            key = field.name  # Field name is the key
+            tk_variable = getattr(self, key)  # Get the tk.Variable (e.g., StringVar, BooleanVar)
+
+            value = dict.get(key)  # Retrieve the value from the loaded dictionary
+            if value is not None:
+                tk_variable.set(value)  # Set the value on the Tkinter variable
+            else:
+                print(f'Invalid format. Missing: {key}')
+
+    def _get_value(self, key):
+        field_value = getattr(self, key)
+        if isinstance(field_value, tk.StringVar):
+            value = field_value.get()
+        elif isinstance(field_value, (tk.BooleanVar, tk.IntVar)):
+            value = field_value.get()
+        else:
+            raise ValueError(f"Unsupported Tkinter variable type for field '{key}'")
+
+        # Dynamic property-based validation
+        if hasattr(self, f"get_{key}"):
+            value = getattr(self, f"get_{key}")  # Call the specific getter method
+
+        return value
+
+    def get(self):
+        dict = {}
+        for field_name in vars(self):
+            try:
+                dict[field_name] = self._get_value(field_name)
+            except Exception as e:
+                print(f"Error retrieving value for '{field_name}': {e}")
+
+        return dict
 
 
 class Subject(pca_model.PCA_Model):
@@ -41,73 +202,22 @@ class Subject(pca_model.PCA_Model):
         self.markers_to_del_set = []
         self.rows_to_del_set = []
         self.func_order = 0
+        self.weights = []
         self.centre_refs = []
         self.skeleton = []
-        self.line_colors_raw = []
-        self.line_colors = []
+        self.line_colours = []
         self.mean_of_data = []
         self.bug_plot_data = pd.DataFrame()
         self.results_file_path = None
         self.subject_UI_settings = {
-                    'rows_to_del': tkinter.StringVar(),
-                    'markers_to_del': tkinter.StringVar(),
-                    'flip_x': tkinter.BooleanVar(),
-                    'flip_y': tkinter.BooleanVar(),
-                    'flip_z': tkinter.BooleanVar(),
-                    'eigenwalker_group': tkinter.StringVar()
+                    'rows_to_del': tk.StringVar(),
+                    'markers_to_del': tk.StringVar(),
+                    'flip_x': tk.BooleanVar(),
+                    'flip_y': tk.BooleanVar(),
+                    'flip_z': tk.BooleanVar(),
+                    'eigenwalker_group': tk.StringVar()
                 }
-        
-
-    def get_skeleton(self):
-        skeleton_temp = np.array([[int(l[0]), int(l[1] or l[0])] for l in self.skeleton])
-        skeleton_temp = self._dissolve_net(skeleton_temp, self.markers_to_del_set)
-        self.line_colors = self.line_colors_raw[skeleton_temp[:, 0]]
-        return self._unique_transform(skeleton_temp)
     
-    
-    # Removes a skeleton line segment 
-    def _dissolve_net(self, segments, points_to_remove):
-        '''
-        Dissolves line segments from `segments` based on `points_to_remove`.
-
-        Args:
-        - segments (numpy.ndarray): Array of line segments represented as pairs of points.
-        - points_to_remove (list): List of points to be removed from `segments`.
-
-        Returns:
-        - numpy.ndarray: Updated segments after removal, sorted by the first point of each segment.
-        '''
-        for point in range(np.amax(segments) + 1):  # Iterate through all points up to max point in segments
-            if point in points_to_remove:
-                # Find segments containing 'point' and flatten to 1D
-                to_remove = segments[np.any(np.isin(segments, point), axis=1)].flatten()
-                for i in to_remove:
-                    if i != point and np.count_nonzero(segments == i) == 1:  # If point is orphaned (only occurs once)
-                        segments = np.append(segments, [[i, i]], axis=0)  # Add orphaned points as segments
-                segments = segments[~np.any(np.isin(segments, point), axis=1)]   # Remove segments containing 'point'
-
-        return segments[np.argsort(segments[:, 0])] # Sort the segments
-
-
-    def _unique_transform(self, arr):
-        '''
-        Transforms a numpy array such that all unique values are mapped to a contiguous range starting from 0.
-        This allows removal of items from the skeleton array while maintining the correct indexing for the marker columns.
-        
-        Args:
-        - arr (numpy.ndarray): Input array to be transformed.
-
-        Returns:
-        - numpy.ndarray: Transformed array with values replaced by their mapped indices.
-        '''
-        flat_arr = arr.flatten()
-        unique_values = np.unique(flat_arr)  # Get unique values
-        value_mapping = {val: idx for idx, val in enumerate(unique_values)}  # Create mapping from value to index
-        transformed_flat_arr = np.vectorize(value_mapping.get)(flat_arr)  # Apply mapping to flattened array
-        transformed_arr = transformed_flat_arr.reshape(arr.shape)  # Reshape back to original shape
-        return transformed_arr
-    
-
 
 class Controller():
     def __init__(self):
@@ -122,71 +232,17 @@ class Controller():
         self.data_file_path_list = []
         self.output_folder_path = ''
         self.current_subj = None
-        self.weight_ui = []
-
-        self.current_subject_id = tkinter.StringVar()
-        self.current_eigenwalker_group_id = tkinter.StringVar()
-        self.pca_mode_option_menu = tkinter.StringVar()
-        self.delimiter_entry = tkinter.StringVar()
-        self.freq_entry = tkinter.StringVar()
-        self.del_rows_entry = tkinter.StringVar()
-        self.del_markers_entry = tkinter.StringVar()
-        self.gap_filling_option_menu = tkinter.StringVar()
-        self.data_filtering_option_menu = tkinter.StringVar()
-        self.centring_option_menu = tkinter.StringVar()
-        self.align_orientation_option_menu = tkinter.StringVar()
-        self.orientation_cutoff_freq_entry = tkinter.StringVar()
-        self.normalisation_option_menu = tkinter.StringVar()
-        self.weights_option_menu = tkinter.StringVar()
-        self.coordinate_transformation_option_menu = tkinter.StringVar()
-        self.pp_filter_option_menu = tkinter.StringVar()
-        self.pv_filter_option_menu = tkinter.StringVar()
-        self.pa_filter_option_menu = tkinter.StringVar()
-        self.pm_filter_order_entry = tkinter.StringVar()
-        self.pm_filter_cut_off_entry = tkinter.StringVar()
-        self.loocv_checkbox = tkinter.BooleanVar()
-        self.freq_harmonics_entry = tkinter.StringVar()
-        self.plot_save_extension_option_menu = tkinter.StringVar()
-        self.ev_num_of_pcs_entry = tkinter.StringVar()
-        self.sine_approx_checkbox = tkinter.BooleanVar()
-        self.amp_factors_entry = tkinter.StringVar()
-        self.appearance_mode_option_menu = tkinter.StringVar()
-        self.scaling_option_menu = tkinter.StringVar()
-        self.tooltips_checkbox = tkinter.BooleanVar()
-
+        self.g_weight = np.array([])
+        self.g_centre_ref = np.array([])
+        self.g_skeleton = np.array([])
+        self.g_colour = np.array([])
         self.eigenwalker_pca_runs = {}
-        
-        self.view.setup_ui()
+        self.current_subject_id = tk.StringVar()
+        self.current_eigenwalker_group_id = tk.StringVar()
+        self.subject_UI_settings_dict = {}
+        self.configuration = Configuration()
 
-        self.save_configuration = {
-            'pca_mode_option_menu': self.pca_mode_option_menu,
-            'delimiter_entry': self.delimiter_entry,
-            'freq_entry': self.freq_entry,
-            'del_rows_entry': self.del_rows_entry,
-            'del_markers_entry': self.del_markers_entry,
-            'gap_filling_option_menu': self.gap_filling_option_menu,
-            'data_filtering_option_menu': self.data_filtering_option_menu,
-            'centring_option_menu': self.centring_option_menu,
-            'align_orientation_option_menu': self.align_orientation_option_menu,
-            'orientation_cutoff_freq_entry': self.orientation_cutoff_freq_entry,
-            'normalisation_option_menu': self.normalisation_option_menu,
-            'weights_option_menu': self.weights_option_menu,
-            'coordinate_transformation_option_menu': self.coordinate_transformation_option_menu,
-            'pp_filter_option_menu': self.pp_filter_option_menu,
-            'pv_filter_option_menu': self.pv_filter_option_menu,
-            'pa_filter_option_menu': self.pa_filter_option_menu,
-            'pm_filter_order_entry': self.pm_filter_order_entry,
-            'pm_filter_cut_off_entry': self.pm_filter_cut_off_entry,
-            'loocv_checkbox': self.loocv_checkbox,
-            'freq_harmonics_entry': self.freq_harmonics_entry,
-            'plot_save_extension_option_menu': self.plot_save_extension_option_menu,
-            'ev_num_of_pcs_entry': self.ev_num_of_pcs_entry,
-            'sine_approx_checkbox': self.sine_approx_checkbox,
-            'amp_factors_entry': self.amp_factors_entry,
-            'appearance_mode_option_menu': self.appearance_mode_option_menu,
-            'scaling_option_menu': self.scaling_option_menu,
-            'tooltips_checkbox': self.tooltips_checkbox
-        }
+        self.view.setup_ui()
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         #os.chdir(script_dir)  # Change the current working directory to the script directory
@@ -196,6 +252,8 @@ class Controller():
 
     def run_analysis(self):
         '''Executes PCA processing when 'Run PCA' button is pushed, running in a separate thread.'''
+        gc.collect()
+        
         start_time = time.time()
         self.view.prepare_ui()
 
@@ -220,13 +278,18 @@ class Controller():
 
     def _run_analysis_thread(self):
         '''Run PCA on the subject data based on selected options.'''
+
+        #self._sync_pca_with_ui()
+
+        self.open_data_files(self.data_file_path_list)
+        
         self.check_ui_settings()
 
         self._sync_pca_with_ui()
-        
+
         self._preprocess_subjects()
 
-        if self.pca_mode_option_menu.get() == 'All Subjects Together':
+        if self.configuration.pca_mode.get() == 'All Subjects Together':
             self._apply_pca_all_subjects_together()
         else:
             self._apply_pca_separately()
@@ -246,15 +309,15 @@ class Controller():
             transformations = {
                 'Removing Markers': (subj_pca_model.remove_markers, subj_pca_model.markers_to_del_set),
                 'Removing Rows': (subj_pca_model.remove_rows, subj_pca_model.rows_to_del_set),
-                'Gap Filling': (subj_pca_model.fill_gaps, self.gap_filling_option_menu.get()),
+                'Gap Filling': (subj_pca_model.fill_gaps, self.configuration.gap_filling.get()),
                 'Initial Data Format Checking': (subj_pca_model.check_data_format, subject_id),
                 'Flipping Axes': (subj_pca_model.flip_axes, [subj_pca_model.subject_UI_settings[key].get() for key in ['flip_x', 'flip_y', 'flip_z']]),
-                'Filtering': (subj_pca_model.filter, self.data_filtering_option_menu.get(), int(string_to_list(self.pm_filter_order_entry.get(), [0])[0]), string_to_list(self.pm_filter_cut_off_entry.get(), [-1])[0]),
-                'Centring': (subj_pca_model.centre, self.centring_option_menu.get(), self.weight_ui, subj_pca_model.centre_refs),
-                'Aligning Orientation': (subj_pca_model.align_orientation, self.align_orientation_option_menu.get(), subj_pca_model.centre_refs, string_to_list(self.orientation_cutoff_freq_entry.get(), [0.0])[0]),
+                'Filtering': (subj_pca_model.filter, self.configuration.data_filtering.get(), self.configuration.get_pm_filter_order, self.configuration.get_pm_filter_cut_off),
+                'Centring': (subj_pca_model.centre, self.configuration.centring.get(), subj_pca_model.weights, subj_pca_model.centre_refs),
+                'Aligning Orientation': (subj_pca_model.align_orientation, self.configuration.align_orientation.get(), subj_pca_model.centre_refs, self.configuration.get_orientation_cutoff_freq),
                 'Saving result for Bug Plot': (self.save_data_bug_plot, subj_pca_model),
-                'Cartesian to Spherical': (subj_pca_model.coordinate_transformation, self.coordinate_transformation_option_menu.get()),
-                'Normalising, Weighting & Centring': (subj_pca_model.norm_weight_centre, subj_pca_model.func_order, self.weights_option_menu.get(), self.weight_ui, self.normalisation_option_menu.get(), subj_pca_model.centre_refs),
+                'Cartesian to Spherical': (subj_pca_model.coordinate_transformation, self.configuration.coordinate_transformation.get()),
+                'Normalising, Weighting & Centring': (subj_pca_model.norm_weight_centre, subj_pca_model.func_order, self.configuration.weights_mode.get(), subj_pca_model.weights, self.configuration.normalisation.get(), subj_pca_model.centre_refs),
                 'Checking Data Formatting': (subj_pca_model.check_data_format, subject_id),
                 f'Preprocessing Complete: {subject_id}\n': (lambda *args: None, ())
             }
@@ -289,7 +352,7 @@ class Controller():
         print(f'Eigenvalues:\n{self.svd_model.eigenvalues[0:5]}')
 
         press_naive, press_approx = pd.DataFrame(), pd.DataFrame()
-        if self.loocv_checkbox.get():
+        if self.configuration.loocv.get():
             press_naive, press_approx = pca_model.loocv(merged_data.to_numpy(), 25, 500)
 
         for i, (subj_preprocessed_data, (id, subj_pca_model)) in enumerate(zip(data_for_pca, self.subj_pca_models.items())):
@@ -305,7 +368,7 @@ class Controller():
             self.svd_model.fit(subj_pca_model.df)  # Fit PCA separately for each subject's data
             
             press_naive, press_approx = pd.DataFrame(), pd.DataFrame()
-            if self.loocv_checkbox.get():
+            if self.configuration.loocv.get():
                 press_naive, press_approx = pca_model.loocv(subj_pca_model.df.to_numpy(), 25, 50)
 
             self._process_and_save_pca_results(id, subj_pca_model, subj_pca_model.df, press_naive, press_approx)
@@ -332,17 +395,17 @@ class Controller():
         '''Process and save PCA results for a given subject.'''
         print(f'{("Processing PCA Results"):<45}', end='\r', flush=True)
         try:
-            results_df = subj_pca_model.postprocess_pca_results(  # TODO: Improve this
+            results_df = subj_pca_model.postprocess_pca_results(
                 subj_preprocessed_data.columns,
                 self.svd_model.project(subj_preprocessed_data),
                 self.svd_model.components,
                 self.svd_model.eigenvalues,
-                self.pp_filter_option_menu.get(),
-                self.pv_filter_option_menu.get(),
-                self.pa_filter_option_menu.get(),
-                int(string_to_list(self.pm_filter_order_entry.get(), [0])[0]),
-                string_to_list(self.pm_filter_cut_off_entry.get(), [-1])[0],
-                np.array(string_to_list(self.freq_harmonics_entry.get())),
+                self.configuration.pp_filter.get(),
+                self.configuration.pv_filter.get(),
+                self.configuration.pa_filter.get(),
+                self.configuration.get_pm_filter_order,
+                self.configuration.get_pm_filter_cut_off,
+                np.array(self.configuration.get_freq_harmonics),
                 PRESS_Naive = press_naive,
                 PRESS_Approx = press_approx
                 # Add custom outputs as kwargs here ....
@@ -392,10 +455,10 @@ class Controller():
                     # Save reconstructed walking data
                     num_eigen_features = subj.results.loc['Loadings'].shape[0]
                     bug_data = eigenwalker_pca_run.reconstruct(..., num_eigen_features,
-                                                        float(self.freq_entry.get()),
+                                                        self.configuration.get_freq,
                                                         float(subj.results.loc['Normalisation Factor'].to_numpy()[0, 0]),
                                                         subj.results.loc['Weight Vector'].to_numpy()[0],
-                                                        self.coordinate_transformation_option_menu.get()
+                                                        self.configuration.coordinate_transformation.get()
                                                         )
                     bug_data_df = pd.DataFrame(data=bug_data)
                     self.save_df_to_csv(f'{self.output_folder_path}/eigenwalkers/{group_id}_{wtype}_{os.path.basename(subj.results_file_path)}', bug_data_df)
@@ -422,19 +485,19 @@ class Controller():
             for i, subj in enumerate(group_subj_models):
                 num_eigen_features = subj.results.loc['Loadings'].shape[0]
                 static_subj = eigenwalker_pca_run.reconstruct(W_S[i], num_eigen_features,
-                                            float(self.freq_entry.get()),
+                                            self.configuration.get_freq,
                                             float(subj.results.loc['Normalisation Factor'].to_numpy()[0, 0]),
                                             subj.results.loc['Weight Vector'].to_numpy()[0],
-                                            self.coordinate_transformation_option_menu.get()
+                                            self.configuration.coordinate_transformation.get()
                                             )
                 static_subj_df = pd.DataFrame(data=static_subj)
                 self.save_df_to_csv(f'{self.output_folder_path}/eigenwalkers/structural/structural_{group_id}_{os.path.basename(subj.results_file_path)}', static_subj_df)
 
                 static_subj = eigenwalker_pca_run.reconstruct(W_D[i], num_eigen_features,
-                                            float(self.freq_entry.get()),
+                                            self.configuration.get_freq,
                                             float(subj.results.loc['Normalisation Factor'].to_numpy()[0, 0]),
                                             subj.results.loc['Weight Vector'].to_numpy()[0],
-                                            self.coordinate_transformation_option_menu.get()
+                                            self.configuration.coordinate_transformation.get()
                                             )
                 static_subj_df = pd.DataFrame(data=static_subj)
                 self.save_df_to_csv(f'{self.output_folder_path}/eigenwalkers/dynamic/dynamic_{group_id}_{os.path.basename(subj.results_file_path)}', static_subj_df)
@@ -479,30 +542,12 @@ class Controller():
 
         if not self.subj_pca_models:
             raise TerminatingError('No data files provided.')
-        
-        if not self.freq_entry.get():
-            raise TerminatingError('No sample frequency provided.')
-            
-        # Check for missing parameters
-        if (self.data_filtering_option_menu.get() == 'Butterworth' or
-            self.pp_filter_option_menu.get() == 'Low Pass Butterworth' or
-            self.pv_filter_option_menu.get() == 'Low Pass Butterworth' or
-            self.pa_filter_option_menu.get() == 'Low Pass Butterworth'):
-                
-            if not self.pm_filter_order_entry.get():
-                raise TerminatingError('No order for butterworth filter provided')
-            
-            if not self.pm_filter_cut_off_entry.get():
-                raise TerminatingError('No cutoffs for butterworth filter provided')
-
+    
 
     def open_data_files(self, file_paths=[]):
         '''
         Open and process subject files, updating the file path label and table.
         '''
-
-        if not self.freq_entry.get():
-            raise TerminatingError('No sample frequency provided.')
 
         if not file_paths:
             file_paths = self.view._ask_open_filenames()
@@ -514,53 +559,57 @@ class Controller():
             else:
                 self.data_file_path_list = file_paths
 
-        if len(self.data_file_path_list) == 0:
+        # If there are any missing files, issue a single warning
+        missing_files = [file_path for file_path in self.data_file_path_list if not os.path.exists(file_path)]
+        if missing_files:
+            Warning(''.join(f'\nFile not found: {file_path}' for file_path in missing_files))
+            
+        # Remove data files that cannot be found
+        self.data_file_path_list = [file_path for file_path in self.data_file_path_list if os.path.exists(file_path)]
+
+        if not self.data_file_path_list:
             return
 
-        self.view.update_file_path_label(self.data_file_path_list)
-
         # Update subject selection dropdown and related attributes.
+        self.view.update_file_path_label(self.data_file_path_list)
         subject_basenames = [os.path.basename(path) for path in self.data_file_path_list]
-
-        if not subject_basenames:
-            return False
         
-        # Check if any data files cannot be found
-        for i, id in enumerate(subject_basenames):
-            if not os.path.exists(self.data_file_path_list[i]):
-                raise TerminatingError(f'Data file for subject "{id}" could not be found at path: {self.data_file_path_list[i]}.')
-        
-
         self.view.subject_selection_option_menu_1.configure(values=subject_basenames)
         self.view.subject_selection_option_menu_2.configure(values=subject_basenames)
         self.view.subject_selection_option_menu_3.configure(values=subject_basenames)
         self.current_subject_id.set(subject_basenames[0])
         
-        # Retrieve table data to save it from being erased
-        temp_table_data = [self.view._get_table_values('weights'), self.view._get_table_values('centre_ref'), self.view._get_table_values('skeleton'), self.view._get_table_values('colour')]
-
         # Clear existing table entries
         for item in self.view.table.get_children():
             self.view.table.delete(item)
 
-        # Get delimiter from entry or set to None
-        delim = self.delimiter_entry.get() or None
-
-        raw_data_subj_0 = pd.read_csv(self.data_file_path_list[0], delimiter=delim, header=0)
-
-        # Group columns by their base name (e.g., 'marker_x', 'marker_y', 'marker_z')
-        column_struct = [list(group) for _, group in itertools.groupby(
-            list(raw_data_subj_0), key=lambda string: string[:-1]
-        )]
-
-        # Extract markers (groups of columns with the same base name)
-        markers = [group for group in column_struct if len(group) == 3]
-
         # Initialise all the PCASubject objects
         self.subj_pca_models = {}  # Clear existing subject PCAs
         for i, id in enumerate(subject_basenames):
-            raw_data = pd.read_csv(self.data_file_path_list[i], delimiter=delim, header=0)
-            self.subj_pca_models[id] = Subject(raw_data.loc[:, np.concatenate(markers)], string_to_list(self.freq_entry.get())[0])
+            raw_data = pd.read_csv(self.data_file_path_list[i], delimiter=self.configuration.get_delimiter or None, header=0)
+            if i == 0:
+                # Group columns by their base name (e.g., 'marker_x', 'marker_y', 'marker_z')
+                column_struct = [list(group) for _, group in itertools.groupby(
+                    list(raw_data), key=lambda string: string[:-1]
+                )]
+                # Extract markers (groups of columns with the same base name)
+                markers = [group for group in column_struct if len(group) == 3]
+                
+                if len(markers) < 1:
+                    raise TerminatingError("No 3D marker data found in the input (missing columns ending with x, y, z). The number of markers must be greater than 0.")
+                
+            self.subj_pca_models[id] = Subject(raw_data.loc[:, np.concatenate(markers)], self.configuration.get_freq)
+
+            if id in self.subject_UI_settings_dict:
+                saved_settings = self.subject_UI_settings_dict[id]
+                self.subj_pca_models[id].subject_UI_settings = {
+                    'rows_to_del': tk.StringVar(value=saved_settings.get('rows_to_del', '')),
+                    'markers_to_del': tk.StringVar(value=saved_settings.get('markers_to_del','')),
+                    'flip_x': tk.BooleanVar(value=saved_settings.get('flip_x', False)),
+                    'flip_y': tk.BooleanVar(value=saved_settings.get('flip_y', False)),
+                    'flip_z': tk.BooleanVar(value=saved_settings.get('flip_z', False)),
+                    'eigenwalker_group': tk.StringVar(value=saved_settings.get('eigenwalker_group', ''))
+                }
 
         # Update the subject selection in the UI if there are subjects
         if subject_basenames:
@@ -570,19 +619,22 @@ class Controller():
         for i, marker in enumerate(markers):
             children_suffixes = ','.join([var[-1] for var in marker])
             parent_text = f'{i:<5} {marker[0][:-1]}({children_suffixes})'
-            self.view.table.insert('', tkinter.END, text=parent_text, values=('1.0', '0.0', '', '0'), iid=i, open=False, tags=(str(i),))
+            self.view.table.insert('', tk.END, text=parent_text, values=('1.0', '0.0', '', '0'), iid=i, open=False, tags=(str(i),))
 
-        # Update table values with weights if available
-        for i, marker in enumerate(markers):
-            if i < len(temp_table_data[0]):
-                self.view.table.set(i, '#1', temp_table_data[0][i])
-                self.view.table.set(i, '#2', temp_table_data[1][i])
-                self.view.table.set(i, '#3', temp_table_data[2][i])
-                self.view.table.set(i, '#4', temp_table_data[3][i])
+        for i in range(len(markers)):
+            self.view.table.set(i, '#1', self.g_weight[i])
+            self.view.table.set(i, '#2', self.g_centre_ref[i])
+            self.view.table.set(i, '#3', self.g_skeleton[i])
+            self.view.table.set(i, '#4', self.g_colour[i])
 
         self._sync_pca_with_ui()
+    
 
-        return True
+    def set_table_vars(self):
+        self.g_weight = np.array(self.view._get_table_values('weights')) #np.array([w for i, w in enumerate(self.view._get_table_values('weights')) if i not in list(subj_pca_model.markers_to_del_set)])
+        self.g_centre_ref = np.array(self.view._get_table_values('centre_ref'))
+        self.g_skeleton = np.array(self.view._get_table_values('skeleton'))
+        self.g_colour = np.array(self.view._get_table_values('colour'))
 
 
     def global_to_local(self, global_file_paths):
@@ -611,15 +663,9 @@ class Controller():
             self.view.title(f'PMAnalyserPython [{self.project_name}]')
             
         # Gather project data into a dictionary
-        project_dict = {}
-        for key, value in self.save_configuration.items():
-            if isinstance(value, tkinter.StringVar):
-                value = str(value.get())
-            elif isinstance(value, (tkinter.BooleanVar, tkinter.IntVar)):
-                value = value.get()
+        project_dict = self.configuration.get()
 
-            project_dict[key] = value 
-
+        # Additional settings to save
         project_dict['project_name'] = self.project_name
         project_dict['data_file_path_list'] = self.global_to_local(self.data_file_path_list)
         project_dict['subject_UI_settings_dict'] = {
@@ -669,37 +715,17 @@ class Controller():
             raise TerminatingError(f'Invalid JSON format: {e}')
 
         self.data_file_path_list =  loaded_project_dict.get('data_file_path_list', [])
-        
-        # Load all of the variables
-        for key, setter in self.save_configuration.items():
-            value = loaded_project_dict.get(key)
-            if value is not None:
-                setter.set(value)
-            else:
-                print(f'Invalid JSON format. Missing: {key}')
-        
-        files_provided = self.open_data_files(self.data_file_path_list)
 
-        if files_provided:
-            # Sets the weights and reference columns in the table
-            weights = loaded_project_dict.get('weights', [])
-            num_of_table_rows = len(weights)
-            for i in range(num_of_table_rows):
-                self.view.table.set(i, '#1', weights[i])
-                self.view.table.set(i, '#2', loaded_project_dict.get('centre_ref_column', np.zeros(num_of_table_rows))[i])
-                self.view.table.set(i, '#3', loaded_project_dict.get('skeleton', [''] * num_of_table_rows)[i])
-                self.view.table.set(i, '#4', loaded_project_dict.get('colour', ['0'] * num_of_table_rows)[i])
+        self.configuration.set_all(loaded_project_dict)
+        
+        self.g_weight = np.array(loaded_project_dict.get('weights', []))
+        self.g_centre_ref = np.array(loaded_project_dict.get('centre_ref_column', np.zeros(len(self.g_weight))))
+        self.g_skeleton = np.array(loaded_project_dict.get('skeleton', [''] * len(self.g_weight)))
+        self.g_colour = np.array(loaded_project_dict.get('colour', ['0'] * len(self.g_weight)))
 
-        for key, value in loaded_project_dict.get('subject_UI_settings_dict', {}).items():
-            if key in self.subj_pca_models:
-                self.subj_pca_models[key].subject_UI_settings = {
-                    'rows_to_del': tkinter.StringVar(value=value.get('rows_to_del', '')),
-                    'markers_to_del': tkinter.StringVar(value=value.get('markers_to_del','')),
-                    'flip_x': tkinter.BooleanVar(value=value.get('flip_x', False)),
-                    'flip_y': tkinter.BooleanVar(value=value.get('flip_y', False)),
-                    'flip_z': tkinter.BooleanVar(value=value.get('flip_z', False)),
-                    'eigenwalker_group': tkinter.StringVar(value=value.get('eigenwalker_group', ''))
-                }
+        self.subject_UI_settings_dict = loaded_project_dict.get('subject_UI_settings_dict', {})
+
+        self.open_data_files(self.data_file_path_list)
         
         self.view.update_appearance()
         self.view.update_scaling()
@@ -721,43 +747,6 @@ class Controller():
 
     def save_data_bug_plot(self, df, subj_pca_model):
         subj_pca_model.bug_plot_data = df.copy()
-
-
-    def _string_to_index(self, index_string, list_length):
-        '''Convert a string of indices to a list of integers.'''
-        index_string = index_string.replace('[', '').replace(']', '').replace(' ', '')
-        if not index_string:
-            return []
-        
-        indices = []
-        for item in index_string.split(','):
-            parts = item.split(':')
-
-            # Handle cases where slice start, stop, or step might be empty
-            start = int(parts[0]) if parts[0] != '' else None
-            stop = int(parts[1]) if len(parts) > 1 and parts[1] != '' else None
-            step = int(parts[2]) if len(parts) > 2 and parts[2] != '' else None
-            
-            # Adjust for None values and negative indices
-            if start is None:
-                start = 0
-            elif start < 0:
-                start = list_length + start + 1
-                
-            if stop is None:
-                stop = list_length
-            elif stop < 0:
-                stop = list_length + stop + 1
-
-            # If no slice, just append the start value
-            if len(parts) == 1:
-                indices.append(start)
-            else:
-                # Convert slice to a list of indices and extend the main list
-                slice_range = slice(start, stop, step)
-                indices.extend(range(slice_range.start, slice_range.stop, slice_range.step or 1))
-
-        return indices
 
 
     def _read_csv_safe(self, csv_path):
@@ -792,7 +781,7 @@ class Controller():
 
         # Define the path for the CSV output files
         pca_mode_name_component = 'pca_each_separately'
-        if self.pca_mode_option_menu.get() == 'All Subjects Together':
+        if self.configuration.pca_mode.get() == 'All Subjects Together':
             pca_mode_name_component = 'pca_all_together'
 
         self.output_folder_path = f'{self.project_name.split(".")[0]}_{pca_mode_name_component}'
@@ -802,23 +791,26 @@ class Controller():
             num_of_markers = subj_pca_model.raw_data.shape[1] // 3
 
             markers_to_del_temp = list(set(
-                self._string_to_index(subj_pca_model.subject_UI_settings['markers_to_del'].get(), num_of_markers) + 
-                self._string_to_index(self.del_markers_entry.get(),  num_of_markers)
+                _string_to_index(subj_pca_model.subject_UI_settings['markers_to_del'].get(), num_of_markers) + 
+                _string_to_index(self.configuration.get_del_markers,  num_of_markers)
             ))
 
             # Store updated marker deletion set and skeleton in subject metadata
             subj_pca_model.markers_to_del_set = markers_to_del_temp
-            self.weight_ui = np.array([w for i, w in enumerate(self.view._get_table_values('weights')) if i not in list(subj_pca_model.markers_to_del_set)])
-            subj_pca_model.func_order = 4 if self.normalisation_option_menu.get() == 'Mean Dist. 2 Markers (Centre Ref.)' else 0
-            subj_pca_model.centre_refs = np.delete(self.view._get_table_values('centre_ref'), list(subj_pca_model.markers_to_del_set))
-            subj_pca_model.skeleton = list(enumerate(self.view._get_table_values('skeleton')))
-            subj_pca_model.line_colors_raw = np.array(self.view._get_table_values('colour'))
-            subj_pca_model.sample_freq = string_to_list(self.freq_entry.get())[0]
+            subj_pca_model.func_order = 4 if self.configuration.normalisation.get() == 'Mean Dist. 2 Markers (Centre Ref.)' else 0
+            subj_pca_model.weights = np.delete(self.g_weight, list(subj_pca_model.markers_to_del_set)) #self.view._get_table_values('weights')
+            subj_pca_model.centre_refs = np.delete(self.g_centre_ref, list(subj_pca_model.markers_to_del_set))
+            temp_skel = np.array([[int(l[0]), int(l[1] or l[0])] for l in list(enumerate(self.g_skeleton))])
+            temp_skel = _dissolve_net(temp_skel, subj_pca_model.markers_to_del_set)
+            subj_pca_model.line_colours = self.g_colour[temp_skel[:, 0]]
+            subj_pca_model.skeleton = _unique_transform(temp_skel)
+        
+            subj_pca_model.sample_freq = self.configuration.get_freq
 
             num_rows = subj_pca_model.raw_data.shape[0]
             rows_to_del_temp = list(set(
-                self._string_to_index(subj_pca_model.subject_UI_settings['rows_to_del'].get(), num_rows) +
-                self._string_to_index(self.del_rows_entry.get(), num_rows)
+                _string_to_index(subj_pca_model.subject_UI_settings['rows_to_del'].get(), num_rows) +
+                _string_to_index(self.configuration.get_del_rows, num_rows)
             ))
             subj_pca_model.rows_to_del_set = rows_to_del_temp
             subj_pca_model.results_file_path = f'{self.output_folder_path}/{id.split(".")[0]}_pca.csv' 
@@ -834,9 +826,9 @@ class Controller():
     def save_plots(self):
         '''Save all plots.'''
         print('Saving Plots')
-        self.view.fig_ev.savefig(f'{self.output_folder_path}/EV_Plots.{self.plot_save_extension_option_menu.get()}', dpi=300)
+        self.view.fig_ev.savefig(f'{self.output_folder_path}/EV_Plots.{self.configuration.plot_save_extension.get()}', dpi=300)
         for i, score_plot_tab_name in enumerate(self.view.score_plot_tab_names):
-            self.view.fig_score_plots[i].savefig(f'{self.output_folder_path}/Score_Plot_{score_plot_tab_name}.{self.plot_save_extension_option_menu.get()}', dpi=300)
+            self.view.fig_score_plots[i].savefig(f'{self.output_folder_path}/Score_Plot_{score_plot_tab_name}.{self.configuration.plot_save_extension.get()}', dpi=300)
     
 
     def save_animated_plots(self):
@@ -881,6 +873,122 @@ class Controller():
         except Exception as e:
             raise Exception(f'Could not save CSV file {os.path.dirname(file_path)}: {e}')
 
+
+def string_to_list(index_string, no_str_result = []):
+    index_string = index_string.replace('[', '').replace(']', '').replace(' ', '')
+    if not index_string:
+        return no_str_result
+    
+    result_list = []
+    for item in index_string.split(','):
+        if item:
+            if isfloat(item):
+                result_list.append(float(item))
+            elif item:
+                raise TerminatingError(f"Invalid literal for float: '{item}'")
+    
+    if len(result_list) == 0:
+        return no_str_result
+    return result_list
+
+
+def _validate_index_string(index_string):
+    index_string = index_string.replace('[', '').replace(']', '').replace(' ', '')
+    pattern = r'^(:?\d*(?::\d*){0,2})(?:,(?:\d*(?::\d*){0,2}))*$' # Regex to match valid index or slice patterns
+    
+    # Check if the index_string matches the pattern
+    if not re.match(pattern, index_string):
+        return False
+    
+    # Check each part of the index_string
+    for item in index_string.split(','):
+        parts = item.split(':')
+        
+        if len(parts) > 3:
+            return False
+
+    return True
+
+
+def _string_to_index(index_string, list_length):
+    '''Convert a string of indices to a list of integers.'''
+    index_string = index_string.replace('[', '').replace(']', '').replace(' ', '')
+    if not index_string:
+        return []
+    
+    indices = []
+    for item in index_string.split(','):
+        parts = item.split(':')
+
+        # Handle cases where slice start, stop, or step might be empty
+        start = int(parts[0]) if parts[0] != '' else None
+        stop = int(parts[1]) if len(parts) > 1 and parts[1] != '' else None
+        step = int(parts[2]) if len(parts) > 2 and parts[2] != '' else None
+        
+        # Adjust for None values and negative indices
+        if start is None:
+            start = 0
+        elif start < 0:
+            start = list_length + start + 1
+            
+        if stop is None:
+            stop = list_length
+        elif stop < 0:
+            stop = list_length + stop + 1
+
+        # If no slice, just append the start value
+        if len(parts) == 1:
+            indices.append(start)
+        else:
+            # Convert slice to a list of indices and extend the main list
+            slice_range = slice(start, stop, step)
+            indices.extend(range(slice_range.start, slice_range.stop, slice_range.step or 1))
+
+    return indices
+
+
+
+# Removes a skeleton line segment 
+def _dissolve_net(segments, points_to_remove):
+    '''
+    Dissolves line segments from `segments` based on `points_to_remove`.
+
+    Args:
+    - segments (numpy.ndarray): Array of line segments represented as pairs of points.
+    - points_to_remove (list): List of points to be removed from `segments`.
+
+    Returns:
+    - numpy.ndarray: Updated segments after removal, sorted by the first point of each segment.
+    '''
+    for point in range(np.amax(segments) + 1):  # Iterate through all points up to max point in segments
+        if point in points_to_remove:
+            # Find segments containing 'point' and flatten to 1D
+            to_remove = segments[np.any(np.isin(segments, point), axis=1)].flatten()
+            for i in to_remove:
+                if i != point and np.count_nonzero(segments == i) == 1:  # If point is orphaned (only occurs once)
+                    segments = np.append(segments, [[i, i]], axis=0)  # Add orphaned points as segments
+            segments = segments[~np.any(np.isin(segments, point), axis=1)]   # Remove segments containing 'point'
+
+    return segments[np.argsort(segments[:, 0])] # Sort the segments
+
+
+def _unique_transform(arr):
+    '''
+    Transforms a numpy array such that all unique values are mapped to a contiguous range starting from 0.
+    This allows removal of items from the skeleton array while maintining the correct indexing for the marker columns.
+    
+    Args:
+    - arr (numpy.ndarray): Input array to be transformed.
+
+    Returns:
+    - numpy.ndarray: Transformed array with values replaced by their mapped indices.
+    '''
+    flat_arr = arr.flatten()
+    unique_values = np.unique(flat_arr)  # Get unique values
+    value_mapping = {val: idx for idx, val in enumerate(unique_values)}  # Create mapping from value to index
+    transformed_flat_arr = np.vectorize(value_mapping.get)(flat_arr)  # Apply mapping to flattened array
+    transformed_arr = transformed_flat_arr.reshape(arr.shape)  # Reshape back to original shape
+    return transformed_arr
 
 
 

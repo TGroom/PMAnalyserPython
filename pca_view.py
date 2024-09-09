@@ -9,7 +9,7 @@ Attributes:
     No public attributes.
 """
 import os
-import tkinter
+import tkinter as tk
 import tkinter.messagebox
 
 import numpy as np
@@ -245,7 +245,7 @@ class PCA_View(customtkinter.CTk):
             self.settings_frame, dynamic_resizing=False,
             values=['System', 'Light', 'Dark'],
             command=customtkinter.set_appearance_mode,
-            variable=self.controller.appearance_mode_option_menu,
+            variable=self.controller.configuration.appearance_mode,
              **self.option_menu_settings
         )
         self.appearance_mode_option_menu.grid(row=1, column=4, sticky='swe', **self.grid_settings)
@@ -257,7 +257,7 @@ class PCA_View(customtkinter.CTk):
             self.settings_frame, dynamic_resizing=False,
             values=['50%', '75%', '90%', '100%', '110%', '125%', '150%', '175%', '200%', '225%', '250%'],
             command=self.update_scaling,
-            variable=self.controller.scaling_option_menu,
+            variable=self.controller.configuration.scaling,
              **self.option_menu_settings
         )
         self.scaling_option_menu.grid(row=2, column=4, sticky='nwe', **self.grid_settings)
@@ -265,7 +265,7 @@ class PCA_View(customtkinter.CTk):
 
         tooltips_label = customtkinter.CTkLabel(self.settings_frame, text='Show Tooltips')
         tooltips_label.grid(row=3, column=3, sticky='ne', **self.grid_settings)
-        self.tooltips_checkbox = customtkinter.CTkCheckBox(self.settings_frame, text='', command=self._toggle_tooltips, variable=self.controller.tooltips_checkbox, **self.checkbox_settings)
+        self.tooltips_checkbox = customtkinter.CTkCheckBox(self.settings_frame, text='', command=self._toggle_tooltips, variable=self.controller.configuration.tooltips, **self.checkbox_settings)
         self.tooltips_checkbox.grid(row=3, column=4, sticky='swe', **self.grid_settings)
 
         # Input Data Frame
@@ -283,29 +283,29 @@ class PCA_View(customtkinter.CTk):
         self.file_path_label.grid(row=1, column=0, columnspan=2, sticky='nsew', **self.grid_settings)
 
         # Data Information & Treatment
-        self.pca_mode_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['All Subjects Together', 'Every Data Set Seperately'], variable=self.controller.pca_mode_option_menu, **self.option_menu_settings)
-        self.delimiter_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.delimiter_entry, corner_radius=self.corner_radius)
-        self.freq_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.freq_entry, corner_radius=self.corner_radius)
-        self.del_rows_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.del_rows_entry, corner_radius=self.corner_radius)
-        self.del_markers_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.del_markers_entry, corner_radius=self.corner_radius)
-        self.gap_filling_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Forward Fill', 'Backward Fill', 'Linear', 'Quadratic', 'Cubic', '1st Order Spline', '2nd Order Spline'], variable=self.controller.gap_filling_option_menu, **self.option_menu_settings)
-        self.data_filtering_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Butterworth'], **self.option_menu_settings)
-        self.centring_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Mean Marker Position', 'Mean Marker Pos. (Weights)', 'Mean Marker Pos. (Centre Ref.)'], variable=self.controller.centring_option_menu, **self.option_menu_settings)
-        self.align_orientation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Body-Fixed (Centre Ref.)', 'Soft Align Z (X-Axis)', 'Soft Align Z (Y-Axis)'], variable=self.controller.align_orientation_option_menu, **self.option_menu_settings)
-        self.orientation_cutoff_freq_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.orientation_cutoff_freq_entry, corner_radius=self.corner_radius)
-        self.normalisation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'MED (Mean Euclidean Distance)', 'Mean Dist. 2 Markers (Centre Ref.)', 'Maximum Range (1st Coords)', 'Maximum Range (2nd Coords)', 'Maximum Range (3rd Coords)'], variable=self.controller.normalisation_option_menu, **self.option_menu_settings)
-        self.weights_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Manual Weight Vector'], variable=self.controller.weights_option_menu, **self.option_menu_settings)
-        self.coordinate_transformation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Cartesian -> Spherical (3D)'], variable=self.controller.coordinate_transformation_option_menu, **self.option_menu_settings)
+        self.pca_mode_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['All Subjects Together', 'Every Data Set Seperately'], variable=self.controller.configuration.pca_mode, **self.option_menu_settings)
+        self.delimiter_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.configuration.delimiter, corner_radius=self.corner_radius)
+        self.freq_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.configuration.freq, corner_radius=self.corner_radius)
+        self.del_rows_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.configuration.del_rows, corner_radius=self.corner_radius)
+        self.del_markers_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.configuration.del_markers, corner_radius=self.corner_radius)
+        self.gap_filling_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Forward Fill', 'Backward Fill', 'Linear', 'Quadratic', 'Cubic', '1st Order Spline', '2nd Order Spline'], variable=self.controller.configuration.gap_filling, **self.option_menu_settings)
+        self.data_filtering_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Butterworth'], variable=self.controller.configuration.data_filtering, **self.option_menu_settings)
+        self.centring_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Mean Marker Position', 'Mean Marker Pos. (Weights)', 'Mean Marker Pos. (Centre Ref.)'], variable=self.controller.configuration.centring, **self.option_menu_settings)
+        self.align_orientation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Body-Fixed (Centre Ref.)', 'Soft Align Z (X-Axis)', 'Soft Align Z (Y-Axis)'], variable=self.controller.configuration.align_orientation, **self.option_menu_settings)
+        self.orientation_cutoff_freq_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.configuration.orientation_cutoff_freq, corner_radius=self.corner_radius)
+        self.normalisation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'MED (Mean Euclidean Distance)', 'Mean Dist. 2 Markers (Centre Ref.)', 'Maximum Range (1st Coords)', 'Maximum Range (2nd Coords)', 'Maximum Range (3rd Coords)'], variable=self.controller.configuration.normalisation, **self.option_menu_settings)
+        self.weights_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Manual Weight Vector'], variable=self.controller.configuration.weights_mode, **self.option_menu_settings)
+        self.coordinate_transformation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Cartesian -> Spherical (3D)'], variable=self.controller.configuration.coordinate_transformation, **self.option_menu_settings)
 
         # Output/Save/Load
-        self.pp_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.pp_filter_option_menu, **self.option_menu_settings)
-        self.pv_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.pv_filter_option_menu, **self.option_menu_settings)
-        self.pa_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.pa_filter_option_menu, **self.option_menu_settings)
-        self.pm_filter_order_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.pm_filter_order_entry, corner_radius=self.corner_radius)
-        self.pm_filter_cut_off_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.pm_filter_cut_off_entry, corner_radius=self.corner_radius)
-        self.loocv_checkbox = customtkinter.CTkCheckBox(self.split_frame_input_data, text='', **self.checkbox_settings, variable=self.controller.loocv_checkbox)
+        self.pp_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.configuration.pp_filter, **self.option_menu_settings)
+        self.pv_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.configuration.pv_filter, **self.option_menu_settings)
+        self.pa_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.configuration.pa_filter, **self.option_menu_settings)
+        self.pm_filter_order_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.configuration.pm_filter_order, corner_radius=self.corner_radius)
+        self.pm_filter_cut_off_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.configuration.pm_filter_cut_off, corner_radius=self.corner_radius)
+        self.loocv_checkbox = customtkinter.CTkCheckBox(self.split_frame_input_data, text='', **self.checkbox_settings, variable=self.controller.configuration.loocv)
         self.loocv_checkbox.select()
-        self.freq_harmonics_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.freq_harmonics_entry, corner_radius=self.corner_radius)
+        self.freq_harmonics_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.configuration.freq_harmonics, corner_radius=self.corner_radius)
 
         # Dictionary to store label texts and corresponding widgets
         components = {
@@ -349,7 +349,7 @@ class PCA_View(customtkinter.CTk):
         self.plot_welch = self.fig_welch.add_subplot(111)
         self.fig_welch.subplots_adjust(bottom=0.2)
         self.canvas_welch = FigureCanvasTkAgg(self.fig_welch, master=self.pca_analysis_graphs_frame.tab('Powerspektrum Plot'))
-        self.canvas_welch.get_tk_widget().pack(expand=1, fill=tkinter.BOTH)
+        self.canvas_welch.get_tk_widget().pack(expand=1, fill=tk.BOTH)
         self.canvas_welch.draw()
 
         self.fig_loocv = plt.Figure(figsize=(15, 2.5), dpi=75)
@@ -357,7 +357,7 @@ class PCA_View(customtkinter.CTk):
         self.fig_loocv.subplots_adjust(bottom=0.2)
         self.plot_loocv_2 = self.plot_loocv.twinx()
         self.canvas_loocv = FigureCanvasTkAgg(self.fig_loocv, master=self.pca_analysis_graphs_frame.tab('Cross-Validation Plot'))
-        self.canvas_loocv.get_tk_widget().pack(expand=1, fill=tkinter.BOTH)
+        self.canvas_loocv.get_tk_widget().pack(expand=1, fill=tk.BOTH)
         self.canvas_loocv.draw()
 
         self.fig_orientation = plt.Figure(figsize=(15, 2.5), dpi=75)
@@ -365,7 +365,7 @@ class PCA_View(customtkinter.CTk):
         self.plot_orientation_freq = self.fig_orientation.add_subplot(122)
         self.fig_orientation.subplots_adjust(bottom=0.2)
         self.canvas_orientation = FigureCanvasTkAgg(self.fig_orientation, master=self.pca_analysis_graphs_frame.tab('Orientation Plot'))
-        self.canvas_orientation.get_tk_widget().pack(expand=1, fill=tkinter.BOTH)
+        self.canvas_orientation.get_tk_widget().pack(expand=1, fill=tk.BOTH)
         self.canvas_orientation.draw()
 
         self.run_pca_button = customtkinter.CTkButton(self.pca_analysis_frame, text='Run PCA', command=self.controller.run_analysis, **self.button_settings)
@@ -382,28 +382,28 @@ class PCA_View(customtkinter.CTk):
         self.plot_3d_subframe = customtkinter.CTkFrame(self.plot_3d_frame, fg_color='transparent')
         self.plot_3d_subframe.grid(row=0, column=0, columnspan=2, sticky='nsew', **self.frame_grid_settings)
 
-        self.style = tkinter.ttk.Style()
+        self.style = tk.ttk.Style()
         self.style.layout('Edge.Treeview', [('Edge.Treeview.treearea',{})])
         self.style.configure('Edge.Treeview', highlightthickness=0, bd=0)
 
-        self.table = Tableview(self.plot_3d_subframe, columns=('#0', '#1', '#2', '#3'), style='Edge.Treeview')
-        self.table.heading('#0', text='Index   Markers', anchor=tkinter.W)
-        self.table.column('#0', width=200, minwidth=200, anchor=tkinter.W)
-        self.table.heading('#1', text='Weights', anchor=tkinter.CENTER)
-        self.table.column('#1', width=75, minwidth=75, anchor=tkinter.CENTER)
-        self.table.heading('#2', text='Centre Ref.', anchor=tkinter.CENTER)
-        self.table.column('#2', width=75, minwidth=75, anchor=tkinter.CENTER)
-        self.table.heading('#3', text='Skeleton', anchor=tkinter.CENTER)
-        self.table.column('#3', width=75, minwidth=75, anchor=tkinter.CENTER)
-        self.table.heading('#4', text='Colour', anchor=tkinter.CENTER)
-        self.table.column('#4', width=100, minwidth=100, anchor=tkinter.CENTER)
-        self.table.pack(side=tkinter.RIGHT, fill=tkinter.BOTH)#(row=0, column=1, sticky='nsew', **self.frame_grid_settings)
+        self.table = Tableview(self.plot_3d_subframe, event=self.controller.set_table_vars, columns=('#0', '#1', '#2', '#3'), style='Edge.Treeview')
+        self.table.heading('#0', text='Index   Markers', anchor=tk.W)
+        self.table.column('#0', width=200, minwidth=200, anchor=tk.W)
+        self.table.heading('#1', text='Weights', anchor=tk.CENTER)
+        self.table.column('#1', width=75, minwidth=75, anchor=tk.CENTER)
+        self.table.heading('#2', text='Centre Ref.', anchor=tk.CENTER)
+        self.table.column('#2', width=75, minwidth=75, anchor=tk.CENTER)
+        self.table.heading('#3', text='Skeleton', anchor=tk.CENTER)
+        self.table.column('#3', width=75, minwidth=75, anchor=tk.CENTER)
+        self.table.heading('#4', text='Colour', anchor=tk.CENTER)
+        self.table.column('#4', width=100, minwidth=100, anchor=tk.CENTER)
+        self.table.pack(side=tk.RIGHT, fill=tk.BOTH)#(row=0, column=1, sticky='nsew', **self.frame_grid_settings)
 
         self.figAnim3D = plt.Figure(figsize=(8, 8), dpi=70)
         self.BugPlot = self.figAnim3D.add_subplot(111, projection='3d')
         self._configure_axes(self.BugPlot, 0.15)
         self.canvas = FigureCanvasTkAgg(self.figAnim3D, self.plot_3d_subframe)
-        self.canvas.get_tk_widget().pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True)#(row=0, column=0, sticky='ns', **self.grid_settings)
+        self.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)#(row=0, column=0, sticky='ns', **self.grid_settings)
         self.canvas.draw()
 
         subject_del_rows_label = customtkinter.CTkLabel(self.plot_3d_frame, text='Delete Subject Specific Rows')
@@ -459,11 +459,11 @@ class PCA_View(customtkinter.CTk):
         self.score_plots_tab.set('Position')
 
         self.pp_score_plots_frame = customtkinter.CTkScrollableFrame(self.score_plots_tab.tab('Position'), fg_color='transparent')
-        self.pp_score_plots_frame.pack(expand=1, fill=tkinter.BOTH)
+        self.pp_score_plots_frame.pack(expand=1, fill=tk.BOTH)
         self.pv_score_plots_frame = customtkinter.CTkScrollableFrame(self.score_plots_tab.tab('Velocity'), fg_color='transparent')
-        self.pv_score_plots_frame.pack(expand=1, fill=tkinter.BOTH)
+        self.pv_score_plots_frame.pack(expand=1, fill=tk.BOTH)
         self.pa_score_plots_frame = customtkinter.CTkScrollableFrame(self.score_plots_tab.tab('Acceleration'), fg_color='transparent')
-        self.pa_score_plots_frame.pack(expand=1, fill=tkinter.BOTH)
+        self.pa_score_plots_frame.pack(expand=1, fill=tk.BOTH)
 
         # Initialise Score Plots
         for i, frame in enumerate([self.pp_score_plots_frame, self.pv_score_plots_frame, self.pa_score_plots_frame]):
@@ -471,8 +471,8 @@ class PCA_View(customtkinter.CTk):
             self.canvas_score_plots[i] = FigureCanvasTkAgg(self.fig_score_plots[i], master=frame)
             self.toolbar_score_plots[i] = NavigationToolbar2Tk(self.canvas_score_plots[i], frame)
             self.toolbar_score_plots[i].update()
-            self.toolbar_score_plots[i].pack(side=tkinter.TOP, fill=tkinter.X)
-            self.canvas_score_plots[i].get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.X, expand=1)
+            self.toolbar_score_plots[i].pack(side=tk.TOP, fill=tk.X)
+            self.canvas_score_plots[i].get_tk_widget().pack(side=tk.TOP, fill=tk.X, expand=1)
 
         # General plots frame
         self.plots_frame = customtkinter.CTkScrollableFrame(self.visualisation_plots_frame, label_text='Plots', **self.frame_settings_level_2_scroll)
@@ -488,18 +488,18 @@ class PCA_View(customtkinter.CTk):
 
         self.plot_save_extension_label = customtkinter.CTkLabel(self.split_frame_plots, text='Save Plots As')
         self.plot_save_extension_label.grid(row=3, column=0, sticky='e', **self.grid_settings)
-        self.plot_save_extension_option_menu = customtkinter.CTkSegmentedButton(self.split_frame_plots, values=['png', 'pdf', 'svg'], variable=self.controller.plot_save_extension_option_menu) #customtkinter.StringVar(value='png')
+        self.plot_save_extension_option_menu = customtkinter.CTkSegmentedButton(self.split_frame_plots, values=['png', 'pdf', 'svg'], variable=self.controller.configuration.plot_save_extension) #customtkinter.StringVar(value='png')
         self.plot_save_extension_option_menu.grid(row=3, column=1, sticky='nsew', **self.grid_settings)
 
         ### Plots settings
         self.ev_num_of_pcs_label = customtkinter.CTkLabel(self.split_frame_plots, text='Number of PCs to plot')
         self.ev_num_of_pcs_label.grid(row=4, column=0, sticky='e', **self.grid_settings)
-        self.ev_num_of_pcs_entry = customtkinter.CTkEntry(self.split_frame_plots, justify='center', textvariable=self.controller.ev_num_of_pcs_entry, corner_radius=self.corner_radius)
+        self.ev_num_of_pcs_entry = customtkinter.CTkEntry(self.split_frame_plots, justify='center', textvariable=self.controller.configuration.ev_num_of_pcs, corner_radius=self.corner_radius)
         self.ev_num_of_pcs_entry.grid(row=4, column=1, sticky='w', **self.grid_settings)
 
         sine_approx_label = customtkinter.CTkLabel(self.split_frame_plots, text='Show Sine Approx.')
         sine_approx_label.grid(row=5, column=0, sticky='e', **self.grid_settings)
-        self.sine_approx_checkbox = customtkinter.CTkCheckBox(self.split_frame_plots, text='', command=self._show_plots, variable=self.controller.sine_approx_checkbox, **self.checkbox_settings)
+        self.sine_approx_checkbox = customtkinter.CTkCheckBox(self.split_frame_plots, text='', command=self._show_plots, variable=self.controller.configuration.sine_approx, **self.checkbox_settings)
         self.sine_approx_checkbox.grid(row=5, column=1, sticky='nw', **self.grid_settings)
         self.sine_approx_checkbox.select()
 
@@ -522,8 +522,8 @@ class PCA_View(customtkinter.CTk):
         self.canvas_ev = FigureCanvasTkAgg(self.fig_ev, master=figure_frame)
         toolbar_ev = NavigationToolbar2Tk(self.canvas_ev, figure_frame)
         toolbar_ev.update()
-        toolbar_ev.pack(side=tkinter.TOP, fill=tkinter.X)
-        self.canvas_ev.get_tk_widget().pack(side=tkinter.BOTTOM, fill=tkinter.BOTH, expand=1)
+        toolbar_ev.pack(side=tk.TOP, fill=tk.X)
+        self.canvas_ev.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
         
 
     def _initialise_videos(self):
@@ -536,7 +536,7 @@ class PCA_View(customtkinter.CTk):
         self.video_visualisation.set('Subject Time Series')
 
         self.time_series_scroll_frame = customtkinter.CTkScrollableFrame(self.video_visualisation.tab('Subject Time Series'), fg_color='transparent')
-        self.time_series_scroll_frame.pack(expand=1, fill=tkinter.BOTH)
+        self.time_series_scroll_frame.pack(expand=1, fill=tk.BOTH)
 
         self.videos_sub_frame = customtkinter.CTkScrollableFrame(self.videos_frame, label_text='Videos', **self.frame_settings_level_2_scroll)
         self.videos_sub_frame.grid(row=0, rowspan=2, column=6, sticky='nesw', **self.frame_grid_settings)
@@ -551,7 +551,7 @@ class PCA_View(customtkinter.CTk):
 
         self.amp_factors_label = customtkinter.CTkLabel(self.split_frame_videos, text='PM Amplification Factors')
         self.amp_factors_label.grid(row=2, column=0, sticky='e', **self.grid_settings)
-        self.amp_factors_entry = customtkinter.CTkEntry(self.split_frame_videos, justify='center', textvariable=self.controller.amp_factors_entry, corner_radius=self.corner_radius)
+        self.amp_factors_entry = customtkinter.CTkEntry(self.split_frame_videos, justify='center', textvariable=self.controller.configuration.amp_factors, corner_radius=self.corner_radius)
         self.amp_factors_entry.grid(row=2, column=1, sticky='w', **self.grid_settings)
 
         self.view_type_option_label = customtkinter.CTkLabel(self.split_frame_videos, text='View')
@@ -612,7 +612,7 @@ class PCA_View(customtkinter.CTk):
         self.slider_ax_1 = self.eigenwalker_figAnim3D.add_axes([0.1, 0.15, 0.65, 0.03])
         self.slider_ax_2 = self.eigenwalker_figAnim3D.add_axes([0.1, 0.1, 0.65, 0.03])
         self.eigenwalker_canvas = FigureCanvasTkAgg(self.eigenwalker_figAnim3D, self.eigenwalkers_subframe)
-        self.eigenwalker_canvas.get_tk_widget().pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True)
+        self.eigenwalker_canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.eigenwalker_canvas.draw()
 
 
@@ -652,7 +652,7 @@ class PCA_View(customtkinter.CTk):
 
 
     def _toggle_tooltips(self):
-        if self.controller.tooltips_checkbox.get():
+        if self.controller.configuration.tooltips.get():
             for tooltip in self.all_tooltips:
                 tooltip.enable()
         else:
@@ -661,18 +661,18 @@ class PCA_View(customtkinter.CTk):
 
 
     def _ask_save_as_filename(self):
-        file_path = tkinter.filedialog.asksaveasfilename(parent=self, title='Choose Save Folder', filetypes=[('PCA', '.pca')])
+        file_path = tk.filedialog.asksaveasfilename(parent=self, title='Choose Save Folder', filetypes=[('PCA', '.pca')])
         return file_path
 
 
     def _ask_open_filename(self):
-        file_path = tkinter.filedialog.askopenfilename(parent=self, title='Choose a File', filetypes=[('PCA', '.pca')])
+        file_path = tk.filedialog.askopenfilename(parent=self, title='Choose a File', filetypes=[('PCA', '.pca')])
         return file_path
 
 
     def _ask_open_filenames(self):
         # Prompt the user to select files if not provided
-        new_file_path_list = tkinter.filedialog.askopenfilenames(
+        new_file_path_list = tk.filedialog.askopenfilenames(
             parent=self, title='Choose Files', filetypes=[('CSV', '.csv'), ('TEXT', '.txt')]
         )
 
@@ -721,7 +721,7 @@ class PCA_View(customtkinter.CTk):
 
 
     def update_appearance(self):
-        customtkinter.set_appearance_mode(self.appearance_mode_option_menu.get())
+        customtkinter.set_appearance_mode(self.controller.configuration.appearance_mode.get())
 
 
     def update_scaling(self, *args):
@@ -729,7 +729,7 @@ class PCA_View(customtkinter.CTk):
         Changes the scaling factor of widgets and updates appearance accordingly.
         '''
         # Convert percentage string to float
-        new_scaling_float = int(self.scaling_option_menu.get().replace('%', '')) / 100
+        new_scaling_float = int(self.controller.configuration.scaling.get().replace('%', '')) / 100
 
         # Apply new scaling
         customtkinter.set_widget_scaling(new_scaling_float)
@@ -794,7 +794,7 @@ class PCA_View(customtkinter.CTk):
 
         frame_count = len(self.controller.current_subj.bug_plot_data)
 
-        self.current_full_skeleton = self.controller.current_subj.get_skeleton()
+        self.current_full_skeleton = self.controller.current_subj.skeleton
         self.set_3d_axis_limits(self.BugPlot,  self.controller.current_subj.bug_plot_data.iloc[:].to_numpy(), 0.95)
         self.BugPlot.set_xlabel('X')
         self.BugPlot.set_ylabel('Y')
@@ -802,7 +802,7 @@ class PCA_View(customtkinter.CTk):
                                 
         # Initialise lines for insect legs in each stick figure plot
         self.lines2 = [self.BugPlot.plot([], [], [], 'o-', color=c, lw=1)[0]
-                       for c in self.controller.current_subj.line_colors]
+                       for c in self.controller.current_subj.line_colours]
         
         def _init_animation():
             '''Initialize the bug animation.'''
@@ -837,10 +837,10 @@ class PCA_View(customtkinter.CTk):
                 self.figAnim3D.canvas.draw()
                 return self.lines2
         
-        # Set up the Tkinter canvas
+        # Set up the tk canvas
         self._destroy_all_canvas()
         self.canvas = FigureCanvasTkAgg(self.figAnim3D, master=self.plot_3d_subframe)
-        self.canvas.get_tk_widget().pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True)#.grid(row=0, column=0, sticky='nsew', **self.grid_settings)
+        self.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)#.grid(row=0, column=0, sticky='nsew', **self.grid_settings)
         self.figAnim3D.suptitle(self.controller.current_subject_id.get())
 
         
@@ -857,8 +857,8 @@ class PCA_View(customtkinter.CTk):
         # Frequency Spectrum plot
         df = self.controller.current_subj.results
         if df.empty:
-            raise TerminatingError("No PCA results file paths found. Run analysis and save the project.")
-            
+            raise TerminatingError(f"No PCA results found for {self.controller.current_subject_id.get()} (PATH={self.controller.current_subj.results_file_path}). Try saving the project and running PCA again.")
+        
         time_series_PP1 = np.array(df.loc[('PP Time Series (Position)')].iloc[:, 0])
 
         self.plot_welch.clear()
@@ -877,10 +877,10 @@ class PCA_View(customtkinter.CTk):
         orientation_plot_drift = self.controller.current_subj.orientation_drift
         orientation_plot_resultant = self.controller.current_subj.orientation_resultant
         
-        if self.align_orientation_option_menu.get() != 'Off' and len(orientation_plot_original) > 1:
+        if self.controller.configuration.align_orientation.get() != 'Off' and len(orientation_plot_original) > 1:
             # Orientation Plot
             xs = np.array(range(len(orientation_plot_original))) / fs
-            if self.align_orientation_option_menu.get() == 'Align Orientation (X-Axis)':
+            if self.controller.configuration.align_orientation.get() == 'Align Orientation (X-Axis)':
                 self.plot_orientation_series.axhline(y=np.pi/2, color='k', linestyle='--', linewidth=1)
             else:
                 self.plot_orientation_series.axhline(y=0, color='k', linestyle='--', linewidth=1)
@@ -907,7 +907,7 @@ class PCA_View(customtkinter.CTk):
 
         self.plot_loocv.clear()
         self.plot_loocv_2.clear()
-        if self.loocv_checkbox.get() and 'PRESS Naive' in df.index and 'PRESS Approx' in df.index:
+        if self.controller.configuration.loocv.get() and 'PRESS Naive' in df.index and 'PRESS Approx' in df.index:
             # Plotting the results
             PRESS_naive = np.array(df.loc[('PRESS Naive')])[0]
             PRESS_naive = PRESS_naive[~np.isnan(PRESS_naive)]
@@ -947,9 +947,9 @@ class PCA_View(customtkinter.CTk):
 
         df = self.controller.current_subj.results
         if df.empty:
-            raise TerminatingError("No PCA results file paths found. Run analysis and save the project.")
+            raise TerminatingError(f"No PCA results found for {self.controller.current_subject_id.get()} (PATH={self.controller.current_subj.results_file_path}). Try saving the project and running PCA again.")
         
-        num_of_PCs_to_show = int(string_to_list(self.controller.ev_num_of_pcs_entry.get(), [12])[0])
+        num_of_PCs_to_show = self.controller.configuration.get_ev_num_of_pcs
         self._plot_ev(df, num_of_PCs_to_show)
         self._plot_scores(df, num_of_PCs_to_show)
             
@@ -991,7 +991,7 @@ class PCA_View(customtkinter.CTk):
             self.fig_score_plots[i].clear()
             self.canvas_score_plots[i].draw()
             self.fig_score_plots[i].set_figheight(num_of_rows*3)
-            self.canvas_score_plots[i].get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.X, expand=1)
+            self.canvas_score_plots[i].get_tk_widget().pack(side=tk.TOP, fill=tk.X, expand=1)
             for k in range(num_of_PCs_to_show):
                 self.score_plot_axes[i].append(self.fig_score_plots[i].add_subplot(num_of_rows, num_of_cols, int(k // 4 * num_of_cols + k % 4 + 1)))
             
@@ -1018,7 +1018,7 @@ class PCA_View(customtkinter.CTk):
         tt = np.linspace(0, scores.iloc[:, plot_index].shape[0] / fs, scores.iloc[:, plot_index].shape[0])
         ax.plot(tt, scores.iloc[:, plot_index].to_numpy(), color=color, lw=0.75)
 
-        if self.sine_approx_checkbox.get() and show_sin_approx:
+        if self.controller.configuration.sine_approx.get() and show_sin_approx:
             def sinfunc(t, A, w, p):
                 return A * np.sin(w * t + p)
 
@@ -1039,7 +1039,7 @@ class PCA_View(customtkinter.CTk):
 
         df = self.controller.current_subj.results
         if df.empty:
-            raise TerminatingError("No PCA results file paths found. Run analysis and save the project.")
+            raise TerminatingError(f"No PCA results found for {self.controller.current_subject_id.get()} (PATH={self.controller.current_subj.results_file_path}). Try saving the project and running PCA again.")
         
         self.initial_synchronization_done = False
         
@@ -1049,7 +1049,7 @@ class PCA_View(customtkinter.CTk):
         self.controller.current_subj.weight_vector = df.loc['Weight Vector'].to_numpy()[0]
 
         # Custom PC scaling from user input
-        amplification_factors = string_to_list(self.amp_factors_entry.get())
+        amplification_factors = self.controller.configuration.get_amp_factors
         amplification_factors = amplification_factors[:8] + [1] * max(0, 8 - len(amplification_factors))
 
         scores = {
@@ -1093,7 +1093,7 @@ class PCA_View(customtkinter.CTk):
         reconstructed_data_pcs = [
             self.controller.current_subj.reconstruct_data(
                                     p_0, (amplification_factors[k] * scores['PP'])[:, [k]], p[:, [k]],
-                                    self.coordinate_transformation_option_menu.get())
+                                    self.controller.configuration.coordinate_transformation.get())
             for k in range(8)
         ]
 
@@ -1107,12 +1107,12 @@ class PCA_View(customtkinter.CTk):
             self.set_3d_axis_limits(ax, reconstructed_data_pcs[k], 0.95)
             ax.set_title(f'PC{k + 1}')
 
-        self.current_full_skeleton = self.controller.current_subj.get_skeleton()
+        self.current_full_skeleton = self.controller.current_subj.skeleton
 
         # Initialize lines for insect legs in each stick figure plot (3D)
         self.lines = [
             [ax.plot([], [], [], 'o-', color=c, lw=1, ms=1.5)[0]
-            for c in self.controller.current_subj.line_colors]
+            for c in self.controller.current_subj.line_colours]
             for ax in self.stick_figures
         ]
 
@@ -1144,10 +1144,10 @@ class PCA_View(customtkinter.CTk):
 
             return [*bar_container1, *bar_container2, *bar_container3, *np.concatenate(self.lines)]
 
-        # Set up the Tkinter canvas
+        # Set up the tk canvas
         self._destroy_all_canvas()
         self.canvas_video_time_series = FigureCanvasTkAgg(self.fig_video_plots, master=self.time_series_scroll_frame) #self.video_visualisation.tab('Subject Time Series'))
-        self.canvas_video_time_series.get_tk_widget().pack(side=tkinter.BOTTOM, fill=tkinter.BOTH, expand=1)
+        self.canvas_video_time_series.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
         self.fig_video_plots.suptitle(f'Time Series [{self.controller.current_subject_id.get()}]')
         self.fig_video_plots.canvas.mpl_connect('motion_notify_event', self._synchronize_rotation)
         #self.fig_video_plots.tight_layout()
@@ -1196,7 +1196,7 @@ class PCA_View(customtkinter.CTk):
         reconstructed_data_pcs = [
             self.controller.current_subj.reconstruct_data(
                                     p_0, (amplification_factors[k] * sweep)[:, [k]], p[:, [k]],
-                                    self.coordinate_transformation_option_menu.get())
+                                    self.controller.configuration.coordinate_transformation.get())
             for k in range(8)
         ]
 
@@ -1206,12 +1206,12 @@ class PCA_View(customtkinter.CTk):
             self.set_3d_axis_limits(ax, reconstructed_data_pcs[k], 0.95)
             ax.set_title(f'PC{k + 1}')
 
-        self.current_full_skeleton = self.controller.current_subj.get_skeleton()
+        self.current_full_skeleton = self.controller.current_subj.skeleton
                        
         # Initialize lines for insect legs in each stick figure plot
         self.lines_loadings = [
             [ax.plot([], [], [], 'o-', color=c, lw=1, ms=1.5)[0]
-            for c in self.controller.current_subj.line_colors]
+            for c in self.controller.current_subj.line_colours]
             for ax in self.stick_figures_pc_loadings
         ]
 
@@ -1237,10 +1237,10 @@ class PCA_View(customtkinter.CTk):
                         lines[i].set_3d_properties(z_values)
             return np.concatenate(self.lines_loadings)
 
-        # Set up the Tkinter canvas
+        # Set up the tk canvas
         self._destroy_all_canvas()
         self.canvas_pc_loadings = FigureCanvasTkAgg(self.fig_pc_loadings, master=self.video_visualisation.tab('PC Loadings'))
-        self.canvas_pc_loadings.get_tk_widget().pack(side=tkinter.BOTTOM, fill=tkinter.BOTH, expand=1)
+        self.canvas_pc_loadings.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
         self.fig_pc_loadings.canvas.mpl_connect('motion_notify_event', self._synchronize_rotation)
         self.fig_pc_loadings.suptitle(f'PC Loadings [{self.controller.current_subject_id.get()}]')
         self.fig_pc_loadings.tight_layout()
@@ -1270,7 +1270,7 @@ class PCA_View(customtkinter.CTk):
         reconstructed_data_pcs = [
             self.controller.current_subj.reconstruct_data(
                                     p_0, (amplification_factors[i] * pp_score)[:, :k], p[:, :k],
-                                    self.coordinate_transformation_option_menu.get())
+                                    self.controller.configuration.coordinate_transformation.get())
             for i, k in enumerate([1, 2, 3, 4, 5, 6, 7, no_of_pcs])
         ]
 
@@ -1285,12 +1285,12 @@ class PCA_View(customtkinter.CTk):
             else:
                 ax.set_title(f'Original')
 
-        self.current_full_skeleton = self.controller.current_subj.get_skeleton()
+        self.current_full_skeleton = self.controller.current_subj.skeleton
                        
         # Initialize lines for insect legs in each stick figure plot
         self.lines_reconstruction = [
             [ax.plot([], [], [], 'o-', color=c, lw=1, ms=1.5)[0]
-            for c in self.controller.current_subj.line_colors]
+            for c in self.controller.current_subj.line_colours]
             for ax in self.stick_figures_pc_reconstruction
         ]
 
@@ -1316,10 +1316,10 @@ class PCA_View(customtkinter.CTk):
                         lines[i].set_3d_properties(z_values)
             return np.concatenate(self.lines_reconstruction)
 
-        # Set up the Tkinter canvas
+        # Set up the tk canvas
         self._destroy_all_canvas()
         self.canvas_pc_reconstruction = FigureCanvasTkAgg(self.fig_pc_reconstruction, master=self.video_visualisation.tab('PC Reconstruction'))
-        self.canvas_pc_reconstruction.get_tk_widget().pack(side=tkinter.BOTTOM, fill=tkinter.BOTH, expand=1)
+        self.canvas_pc_reconstruction.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
         self.fig_pc_reconstruction.canvas.mpl_connect('motion_notify_event', self._synchronize_rotation)
         self.fig_pc_reconstruction.suptitle(f'PC Reconstruction [{self.controller.current_subject_id.get()}]')
         self.fig_pc_reconstruction.tight_layout()
@@ -1390,18 +1390,18 @@ class PCA_View(customtkinter.CTk):
 
         # Initial plot
         bug_data = eigenwalker_pca.reconstruct(eigenwalker_pca.transform_k_to_w(np.zeros_like(V[0])), num_of_eigenposture_features,
-                                               float(self.controller.freq_entry.get()),
+                                               self.controller.configuration.get_freq,
                                                float(df.loc['Normalisation Factor'].to_numpy()[0, 0]),
                                                df.loc['Weight Vector'].to_numpy()[0],
-                                               self.coordinate_transformation_option_menu.get()
+                                               self.controller.configuration.coordinate_transformation.get()
                                             )
 
-        self.current_full_skeleton = template_subj.get_skeleton()
+        self.current_full_skeleton = template_subj.skeleton
         self.set_3d_axis_limits(self.eigenwalker_axes, bug_data, 0.95)
                                 
         # Initialise lines for insect legs in each stick figure plot
         self.lines3 = [self.eigenwalker_axes.plot([], [], [], 'o-', color=c, lw=1)[0]
-                  for c in template_subj.line_colors]
+                  for c in template_subj.line_colours]
 
         def _init_animation():
             '''Initialize the bug animation.'''
@@ -1415,10 +1415,10 @@ class PCA_View(customtkinter.CTk):
             k = np.array([slider_1.val, slider_2.val])
             k = np.pad(k, (0, V.shape[1] - len(k)), 'constant')
             bug_data = eigenwalker_pca.reconstruct(eigenwalker_pca.transform_k_to_w(k), num_of_eigenposture_features,
-                                               float(self.controller.freq_entry.get()),
+                                               self.controller.configuration.get_freq,
                                                float(df.loc['Normalisation Factor'].to_numpy()[0, 0]),
                                                df.loc['Weight Vector'].to_numpy()[0],
-                                               self.coordinate_transformation_option_menu.get()
+                                               self.controller.configuration.coordinate_transformation.get()
                                             )
             coords = bug_data[frame_number % len(bug_data)].reshape(-1, 3)
             for i, (start, end) in enumerate(self.current_full_skeleton):
@@ -1435,7 +1435,7 @@ class PCA_View(customtkinter.CTk):
 
         self._destroy_all_canvas()
         self.eigenwalker_canvas = FigureCanvasTkAgg(self.eigenwalker_figAnim3D, master=self.eigenwalkers_subframe)
-        self.eigenwalker_canvas.get_tk_widget().pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True)#.grid(row=0, column=0, sticky='nsew', **self.grid_settings)
+        self.eigenwalker_canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)#.grid(row=0, column=0, sticky='nsew', **self.grid_settings)
 
         # Create animation
         anim3D = animation.FuncAnimation(
@@ -1493,7 +1493,7 @@ class PCA_View(customtkinter.CTk):
 
 
     def _update_subject_selection(self, switching_to_subject):
-        if switching_to_subject and switching_to_subject != 'None':
+        if switching_to_subject and switching_to_subject != 'None' and switching_to_subject in self.controller.subj_pca_models:
             print(f"Switching to {switching_to_subject}")
             self.subject_del_rows_entry.configure(textvariable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['rows_to_del'])
             self.subject_del_markers_entry.configure(textvariable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['markers_to_del'])
@@ -1606,12 +1606,12 @@ class PCA_View(customtkinter.CTk):
 
     def _disable_widgets(self, widget):
         """
-        Recursively disable all widgets in a Tkinter widget hierarchy.
+        Recursively disable all widgets in a tk widget hierarchy.
         
         Args:
             widget (tk.Widget): The root widget from which to start the disabling process.
         """
-        if isinstance(widget, (tkinter.Canvas, tkinter.Frame, customtkinter.CTkFrame, customtkinter.CTkCanvas, customtkinter.CTkScrollableFrame, customtkinter.CTkScrollbar, customtkinter.CTkTabview)):
+        if isinstance(widget, (tk.Canvas, tk.Frame, customtkinter.CTkFrame, customtkinter.CTkCanvas, customtkinter.CTkScrollableFrame, customtkinter.CTkScrollbar, customtkinter.CTkTabview)):
             for child in widget.winfo_children():
                 self._disable_widgets(child)
         try:
@@ -1627,12 +1627,12 @@ class PCA_View(customtkinter.CTk):
 
     def _enable_widgets(self, widget):
         """
-        Recursively disable all widgets in a Tkinter widget hierarchy.
+        Recursively disable all widgets in a tk widget hierarchy.
         
         Args:
             widget (tk.Widget): The root widget from which to start the disabling process.
         """
-        if isinstance(widget, (tkinter.Canvas, tkinter.Frame, customtkinter.CTkFrame, customtkinter.CTkCanvas, customtkinter.CTkScrollableFrame, customtkinter.CTkScrollbar, customtkinter.CTkTabview)):
+        if isinstance(widget, (tk.Canvas, tk.Frame, customtkinter.CTkFrame, customtkinter.CTkCanvas, customtkinter.CTkScrollableFrame, customtkinter.CTkScrollbar, customtkinter.CTkTabview)):
             for child in widget.winfo_children():
                 self._enable_widgets(child)
         try:
@@ -1646,7 +1646,7 @@ class PCA_View(customtkinter.CTk):
             pass
 
 
-class Tableview(tkinter.ttk.Treeview):
+class Tableview(tk.ttk.Treeview):
     '''
     Custom subclass of ttk.Treeview that enhances functionality with double-click event handling.
     This class extends ttk.Treeview to support double-click events on rows, which opens a read-only EntryPopup to view and potentially edit cell values.
@@ -1658,8 +1658,9 @@ class Tableview(tkinter.ttk.Treeview):
 
     Source: https://stackoverflow.com/questions/18562123/how-to-make-ttk-treeviews-rows-editable
     '''
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, event=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self._event_callback = event  # Store the event callback function
         self.bind('<Double-1>', self._onDoubleClick)  # Bind double-click to event handler
 
     def _onDoubleClick(self, event):
@@ -1679,13 +1680,13 @@ class Tableview(tkinter.ttk.Treeview):
         if int(column[1:]) > 0:
             # place Entry popup properly
             text = self.item(rowid, 'values')[int(column[1:]) - 1]
-            self.entry_popup = EntryPopup(self, rowid, int(column[1:]) - 1, text, justify='center')
+            self.entry_popup = EntryPopup(self, rowid, int(column[1:]) - 1, text, event=self._event_callback, justify='center')
             self.entry_popup.place(x=x + 1, y=y + (height // 2), width=width, height=height, anchor='w')
 
 
-class EntryPopup(tkinter.ttk.Entry):
+class EntryPopup(tk.ttk.Entry):
     '''
-    EntryPopup extends tkinter.ttk.Entry to create a popup widget for editing treeview rows.
+    EntryPopup extends tk.ttk.Entry to create a popup widget for editing treeview rows.
 
     Methods:
     - _on_return(event): Handles updating the treeview item with the entered value.
@@ -1693,11 +1694,11 @@ class EntryPopup(tkinter.ttk.Entry):
 
     Source: https://stackoverflow.com/questions/18562123/how-to-make-ttk-treeviews-rows-editable
     '''
-    def __init__(self, parent, iid, column, text, **kw):
+    def __init__(self, parent, iid, column, text, *args, event=None, **kwargs):
         # Configure custom style
-        tkinter.ttk.Style().configure('pad.TEntry', padding='1 1 1 1')
-        super().__init__(parent, style='pad.TEntry', **kw)
-        self.tv, self.iid, self.column = parent, iid, column
+        tk.ttk.Style().configure('pad.TEntry', padding='1 1 1 1')
+        super().__init__(parent, style='pad.TEntry', **kwargs)
+        self.tv, self.iid, self.column, self._event_callback = parent, iid, column, event
 
         self.insert(0, text)  # Insert initial text
         self['exportselection'] = False  # Disable exportselection
@@ -1721,6 +1722,9 @@ class EntryPopup(tkinter.ttk.Entry):
             vals[self.column] = self.get() if is_color_like(self.get()) else '0'
 
         self.tv.item(self.iid, values=vals) # Update treeview item
+        if self._event_callback:
+            self._event_callback()  # Invoke the event callback
+
         self.destroy() # Destroy widget
 
     def _select_all(self, *ignore):
@@ -1808,11 +1812,11 @@ class ToolTip(object):
         x, y, cx, cy = self.widget.bbox("insert")
         x = x + self.widget.winfo_rootx() + 0
         y = y + cy + self.widget.winfo_rooty() + 5
-        self.tipwindow = tw = tkinter.Toplevel(self.widget)
+        self.tipwindow = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(1)
         tw.wm_geometry("+%d+%d" % (x, y))
-        label = tkinter.Label(tw, text=self.text, justify=tkinter.LEFT,
-                              background="#e0e0e0", relief=tkinter.FLAT, borderwidth=0,
+        label = tk.Label(tw, text=self.text, justify=tk.LEFT,
+                              background="#e0e0e0", relief=tk.FLAT, borderwidth=0,
                               font=("tahoma", "8", "normal"))
         label.pack(ipadx=2, ipady=2)
 
@@ -1841,22 +1845,7 @@ def CreateToolTip(widget, text):
     return toolTip
 
 
-def string_to_list(index_string, no_str_result = []):
-    index_string = index_string.replace('[', '').replace(']', '').replace(' ', '')
-    if not index_string:
-        return no_str_result
-    
-    result_list = []
-    for item in index_string.split(','):
-        if item:
-            if isfloat(item):
-                result_list.append(float(item))
-            else:
-                raise TerminatingError(f"Invalid literal for float: '{item}'")
-    
-    if len(result_list) == 0:
-        return no_str_result
-    return result_list
+
 
 
 def isfloat(num):
@@ -1868,7 +1857,6 @@ def isfloat(num):
         return False
 
 def isposint(num):
-    '''Check if a string represents a float number.'''
     try:
         if int(num) >= 0:
             return True
@@ -1879,13 +1867,19 @@ def isposint(num):
 
 class TerminatingError(Exception):
     '''
-    Exception raised for terminating errors in the application, displaying an error message using Tkinter.
+    Exception raised for terminating errors in the application, displaying an error message using tk.
 
     Source: https://stackoverflow.com/questions/7957436/error-exception-must-derive-from-baseexception-even-when-it-does-python-2-7
     '''
     def __init__(self, message):
         self.message = 'ERROR: ' + message
-        tkinter.messagebox.showerror('Terminating Error', self.message)
+        tk.messagebox.showerror('Error', self.message)
 
     def __str__(self):
         return self.message
+
+
+class Warning():
+    def __init__(self, message):
+        self.message = 'WARNING: ' + message
+        tk.messagebox.showwarning('Warning', self.message)
