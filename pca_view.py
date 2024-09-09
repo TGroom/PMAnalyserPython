@@ -22,11 +22,16 @@ from matplotlib.backends.backend_tkagg import (
 import customtkinter
 from matplotlib.widgets import Slider
 from matplotlib.colors import is_color_like
+import sys
 
 
 class PCA_View(customtkinter.CTk):
     def __init__(self, controller):
         super().__init__()
+
+        self.corner_radius = 0
+        if 'win32' in sys.platform:
+            self.corner_radius = 5
 
         # Set appearance mode and color theme
         customtkinter.set_appearance_mode('Dark')  # Modes: 'System' (standard), 'Dark', 'Light'
@@ -53,13 +58,15 @@ class PCA_View(customtkinter.CTk):
         text_color_disabled = ('gray74', 'gray60')
 
         self.frame_settings = {
-            'fg_color': ('gray99', 'gray17')
+            'fg_color': ('gray99', 'gray17'),
+            'corner_radius': 0
         }
         self.sidebar_button_settings = {
             'text_color': text_color,
             'fg_color': ('gray90', '#343638'),
             'hover_color': ('gray95', '#7A848D'),
-            'text_color_disabled': text_color_disabled
+            'text_color_disabled': text_color_disabled,
+            'corner_radius': self.corner_radius
         }
         self.frame_settings_level_2_tab = {
             'fg_color': ('gray96', 'gray21'),
@@ -69,38 +76,50 @@ class PCA_View(customtkinter.CTk):
             'segmented_button_selected_hover_color': theme_color_hover,
             'segmented_button_unselected_color': ('gray88', 'gray29'),
             'segmented_button_unselected_hover_color': ('gray95', 'gray41'),
-            'text_color_disabled': text_color_disabled
+            'text_color_disabled': text_color_disabled,
+            'corner_radius': self.corner_radius
         }
         self.frame_settings_level_2_scroll = {
             'fg_color': ('gray96', 'gray21'),
             'label_fg_color': ('gray92', 'gray25'),
+            'corner_radius': self.corner_radius
         }
         self.button_settings = {
             'fg_color': theme_color,
             'hover_color': theme_color_hover,
             'text_color': text_color,
-            'text_color_disabled': text_color_disabled
+            'text_color_disabled': text_color_disabled,
+            'corner_radius': self.corner_radius
         }
         self.progress_bar_settings = {
+            'border_width': 5,
+            'orientation': 'horizontal',
+            'mode': 'determinate',
+            'indeterminate_speed': 1,
+            'border_color': ('#939BA2', '#4A4D50'),
             'progress_color': theme_color,
-            'fg_color': ('gray96', 'gray21')
+            'fg_color': ('gray96', 'gray21'),
+            'corner_radius': self.corner_radius
         }
         self.option_menu_settings = {
             'text_color': text_color,
             'fg_color': ('#e4e6e7', '#404244'),
             'button_color': ('#d7d9da', '#565B5E'),
             'button_hover_color': self.sidebar_button_settings['hover_color'],
-            'text_color_disabled': text_color_disabled
+            'text_color_disabled': text_color_disabled,
+            'corner_radius': self.corner_radius
         }
         self.entry_settings = {
             'text_color': text_color,
             'text_color_disabled': text_color_disabled,
+            'corner_radius': self.corner_radius
         }
         self.checkbox_settings = {
             'fg_color': theme_color,
             'border_width': 2,
             'border_color': ('#979DA2', '#565B5E'),
-            'hover_color': theme_color_hover
+            'hover_color': theme_color_hover,
+            'corner_radius': self.corner_radius
         }
         self.checkbox_fg_color_disabled = ('#d9d9d9', '#44657e')
         
@@ -120,7 +139,7 @@ class PCA_View(customtkinter.CTk):
         self.grid_rowconfigure(0, weight=1, minsize=100)
 
         # Create sidebar frame with widgets
-        sidebar_frame = customtkinter.CTkFrame(self, width=10, corner_radius=0, **self.frame_settings)
+        sidebar_frame = customtkinter.CTkFrame(self, width=10, **self.frame_settings)
         sidebar_frame.grid(row=0, column=0, sticky='nsw')
         sidebar_frame.grid_rowconfigure(8, weight=1)
 
@@ -129,7 +148,7 @@ class PCA_View(customtkinter.CTk):
         logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
         # PCA Analysis frame
-        self.pca_analysis_frame = customtkinter.CTkFrame(self, corner_radius=0, **self.frame_settings)
+        self.pca_analysis_frame = customtkinter.CTkFrame(self, **self.frame_settings)
         self.pca_analysis_frame.grid_columnconfigure((2, 3, 4), weight=1, minsize=1)
         self.pca_analysis_frame.grid_columnconfigure(0, weight=0, minsize=150)
         self.pca_analysis_frame.grid_columnconfigure(1, weight=0, minsize=300)
@@ -139,7 +158,7 @@ class PCA_View(customtkinter.CTk):
         self.pca_analysis_frame.grid_rowconfigure((7, 8), weight=1, minsize=20)
 
         # Visualisation Plots frame
-        self.visualisation_plots_frame = customtkinter.CTkFrame(self, corner_radius=0, **self.frame_settings)
+        self.visualisation_plots_frame = customtkinter.CTkFrame(self, **self.frame_settings)
         self.visualisation_plots_frame.grid_columnconfigure((2, 3, 4, 5), weight=1, minsize=1)
         self.visualisation_plots_frame.grid_columnconfigure(0, weight=0, minsize=150)
         self.visualisation_plots_frame.grid_columnconfigure(1, weight=0, minsize=300)
@@ -148,7 +167,7 @@ class PCA_View(customtkinter.CTk):
         self.visualisation_plots_frame.grid_rowconfigure(1, weight=1, minsize=100)
 
         # Animation frame
-        self.videos_frame = customtkinter.CTkFrame(self, corner_radius=0, **self.frame_settings)
+        self.videos_frame = customtkinter.CTkFrame(self, **self.frame_settings)
         self.videos_frame.grid_columnconfigure((2, 3, 4, 5), weight=1, minsize=1)
         self.videos_frame.grid_columnconfigure(0, weight=0, minsize=150)
         self.videos_frame.grid_columnconfigure(1, weight=0, minsize=300)
@@ -157,7 +176,7 @@ class PCA_View(customtkinter.CTk):
         self.videos_frame.grid_rowconfigure(1, weight=1, minsize=100)
         
         # Animation frame
-        self.eigenwalkers_frame = customtkinter.CTkFrame(self, corner_radius=0, **self.frame_settings)
+        self.eigenwalkers_frame = customtkinter.CTkFrame(self, **self.frame_settings)
         self.eigenwalkers_frame.grid_columnconfigure((2, 3, 4, 5), weight=1, minsize=1)
         self.eigenwalkers_frame.grid_columnconfigure(0, weight=0, minsize=150)
         self.eigenwalkers_frame.grid_columnconfigure(1, weight=0, minsize=300)
@@ -166,7 +185,7 @@ class PCA_View(customtkinter.CTk):
         self.eigenwalkers_frame.grid_rowconfigure(1, weight=1, minsize=100)
 
         # Settings frame
-        self.settings_frame = customtkinter.CTkFrame(self, corner_radius=0, **self.frame_settings)
+        self.settings_frame = customtkinter.CTkFrame(self, **self.frame_settings)
         self.settings_frame.grid_columnconfigure((1, 8), weight=1, minsize=100)
         self.settings_frame.grid_rowconfigure((1, 20), weight=1, minsize=100)
 
@@ -236,7 +255,7 @@ class PCA_View(customtkinter.CTk):
         scaling_label.grid(row=2, column=3, sticky='ne', **self.grid_settings)
         self.scaling_option_menu = customtkinter.CTkOptionMenu(
             self.settings_frame, dynamic_resizing=False,
-            values=['80%', '90%', '100%', '110%', '120%'],
+            values=['50%', '75%', '90%', '100%', '110%', '125%', '150%', '175%', '200%', '225%', '250%'],
             command=self.update_scaling,
             variable=self.controller.scaling_option_menu,
              **self.option_menu_settings
@@ -258,22 +277,22 @@ class PCA_View(customtkinter.CTk):
         self.split_frame_input_data.grid(row=0, column=0, sticky='nsew')
         self.split_frame_input_data.columnconfigure((0, 1), weight=2)
 
-        self.file_path_button = customtkinter.CTkButton(self.split_frame_input_data, text='Open Files', command = self.controller.open_data_files, **self.button_settings)
+        self.file_path_button = customtkinter.CTkButton(self.split_frame_input_data, text='Open Files', command=self.controller.open_data_files, **self.button_settings)
         self.file_path_button.grid(row=0, column=0, columnspan=2, sticky='nsew', **self.grid_settings)
-        self.file_path_label = customtkinter.CTkTextbox(self.split_frame_input_data, height=100, state='disabled', wrap='word')
+        self.file_path_label = customtkinter.CTkTextbox(self.split_frame_input_data, height=100, state='disabled', wrap='word', corner_radius=self.corner_radius)
         self.file_path_label.grid(row=1, column=0, columnspan=2, sticky='nsew', **self.grid_settings)
 
         # Data Information & Treatment
         self.pca_mode_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['All Subjects Together', 'Every Data Set Seperately'], variable=self.controller.pca_mode_option_menu, **self.option_menu_settings)
-        self.delimiter_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.delimiter_entry)
-        self.freq_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.freq_entry)
-        self.del_rows_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.del_rows_entry)
-        self.del_markers_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.del_markers_entry)
+        self.delimiter_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.delimiter_entry, corner_radius=self.corner_radius)
+        self.freq_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.freq_entry, corner_radius=self.corner_radius)
+        self.del_rows_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.del_rows_entry, corner_radius=self.corner_radius)
+        self.del_markers_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.del_markers_entry, corner_radius=self.corner_radius)
         self.gap_filling_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Forward Fill', 'Backward Fill', 'Linear', 'Quadratic', 'Cubic', '1st Order Spline', '2nd Order Spline'], variable=self.controller.gap_filling_option_menu, **self.option_menu_settings)
         self.data_filtering_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Butterworth'], **self.option_menu_settings)
         self.centring_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Mean Marker Position', 'Mean Marker Pos. (Weights)', 'Mean Marker Pos. (Centre Ref.)'], variable=self.controller.centring_option_menu, **self.option_menu_settings)
         self.align_orientation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Body-Fixed (Centre Ref.)', 'Soft Align Z (X-Axis)', 'Soft Align Z (Y-Axis)'], variable=self.controller.align_orientation_option_menu, **self.option_menu_settings)
-        self.orientation_cutoff_freq_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.orientation_cutoff_freq_entry)
+        self.orientation_cutoff_freq_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.orientation_cutoff_freq_entry, corner_radius=self.corner_radius)
         self.normalisation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'MED (Mean Euclidean Distance)', 'Mean Dist. 2 Markers (Centre Ref.)', 'Maximum Range (1st Coords)', 'Maximum Range (2nd Coords)', 'Maximum Range (3rd Coords)'], variable=self.controller.normalisation_option_menu, **self.option_menu_settings)
         self.weights_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Manual Weight Vector'], variable=self.controller.weights_option_menu, **self.option_menu_settings)
         self.coordinate_transformation_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['Off', 'Cartesian -> Spherical (3D)'], variable=self.controller.coordinate_transformation_option_menu, **self.option_menu_settings)
@@ -282,11 +301,11 @@ class PCA_View(customtkinter.CTk):
         self.pp_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.pp_filter_option_menu, **self.option_menu_settings)
         self.pv_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.pv_filter_option_menu, **self.option_menu_settings)
         self.pa_filter_option_menu = customtkinter.CTkOptionMenu(self.split_frame_input_data, values=['No Filter', 'Low Pass Butterworth'], variable=self.controller.pa_filter_option_menu, **self.option_menu_settings)
-        self.pm_filter_order_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.pm_filter_order_entry)
-        self.pm_filter_cut_off_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.pm_filter_cut_off_entry)
+        self.pm_filter_order_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.pm_filter_order_entry, corner_radius=self.corner_radius)
+        self.pm_filter_cut_off_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.pm_filter_cut_off_entry, corner_radius=self.corner_radius)
         self.loocv_checkbox = customtkinter.CTkCheckBox(self.split_frame_input_data, text='', **self.checkbox_settings, variable=self.controller.loocv_checkbox)
         self.loocv_checkbox.select()
-        self.freq_harmonics_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.freq_harmonics_entry)
+        self.freq_harmonics_entry = customtkinter.CTkEntry(self.split_frame_input_data, justify='center', textvariable=self.controller.freq_harmonics_entry, corner_radius=self.corner_radius)
 
         # Dictionary to store label texts and corresponding widgets
         components = {
@@ -352,10 +371,7 @@ class PCA_View(customtkinter.CTk):
         self.run_pca_button = customtkinter.CTkButton(self.pca_analysis_frame, text='Run PCA', command=self.controller.run_analysis, **self.button_settings)
         self.run_pca_button.grid(row=8, column=5, sticky='nsew', **self.frame_grid_settings)
 
-        self.progress_bar = customtkinter.CTkProgressBar(self.pca_analysis_frame, orientation='horizontal', border_width=5,
-                                                    border_color=('#939BA2', '#4A4D50'), mode='determinate',  #indeterminate
-                                                    height=self.run_pca_button.cget('height'), corner_radius=5,
-                                                    indeterminate_speed=1, **self.progress_bar_settings)
+        self.progress_bar = customtkinter.CTkProgressBar(self.pca_analysis_frame, height=self.run_pca_button.cget('height'), **self.progress_bar_settings)
         self.progress_bar.grid(row=8, column=5, sticky='nsew', **self.frame_grid_settings)
         self.progress_bar.grid_remove()
 
@@ -392,12 +408,12 @@ class PCA_View(customtkinter.CTk):
 
         subject_del_rows_label = customtkinter.CTkLabel(self.plot_3d_frame, text='Delete Subject Specific Rows')
         subject_del_rows_label.grid(row=3, column=0, sticky='e', **self.grid_settings)
-        self.subject_del_rows_entry = customtkinter.CTkEntry(self.plot_3d_frame, justify='center')
+        self.subject_del_rows_entry = customtkinter.CTkEntry(self.plot_3d_frame, justify='center', corner_radius=self.corner_radius)
         self.subject_del_rows_entry.grid(row=3, column=1, sticky='we', **self.grid_settings)
 
         subject_del_markers_label = customtkinter.CTkLabel(self.plot_3d_frame, text='Delete Subject Specific Markers')
         subject_del_markers_label.grid(row=4, column=0, sticky='e', **self.grid_settings)
-        self.subject_del_markers_entry = customtkinter.CTkEntry(self.plot_3d_frame, justify='center')
+        self.subject_del_markers_entry = customtkinter.CTkEntry(self.plot_3d_frame, justify='center', corner_radius=self.corner_radius)
         self.subject_del_markers_entry.grid(row=4, column=1, sticky='we', **self.grid_settings)
 
         self.flip_axes_frame = customtkinter.CTkFrame(self.plot_3d_frame, fg_color='transparent')
@@ -422,7 +438,7 @@ class PCA_View(customtkinter.CTk):
 
         subject_eigenwalker_group_label = customtkinter.CTkLabel(self.plot_3d_frame, text='Eigenwalker PCA Group')
         subject_eigenwalker_group_label.grid(row=7, column=0, sticky='e', **self.grid_settings)
-        self.subject_eigenwalker_group_entry = customtkinter.CTkEntry(self.plot_3d_frame, justify='center')
+        self.subject_eigenwalker_group_entry = customtkinter.CTkEntry(self.plot_3d_frame, justify='center', corner_radius=self.corner_radius)
         self.subject_eigenwalker_group_entry.grid(row=7, column=1, sticky='we', **self.grid_settings)
 
         # Initialise plots and videos
@@ -478,7 +494,7 @@ class PCA_View(customtkinter.CTk):
         ### Plots settings
         self.ev_num_of_pcs_label = customtkinter.CTkLabel(self.split_frame_plots, text='Number of PCs to plot')
         self.ev_num_of_pcs_label.grid(row=4, column=0, sticky='e', **self.grid_settings)
-        self.ev_num_of_pcs_entry = customtkinter.CTkEntry(self.split_frame_plots, justify='center', textvariable=self.controller.ev_num_of_pcs_entry)
+        self.ev_num_of_pcs_entry = customtkinter.CTkEntry(self.split_frame_plots, justify='center', textvariable=self.controller.ev_num_of_pcs_entry, corner_radius=self.corner_radius)
         self.ev_num_of_pcs_entry.grid(row=4, column=1, sticky='w', **self.grid_settings)
 
         sine_approx_label = customtkinter.CTkLabel(self.split_frame_plots, text='Show Sine Approx.')
@@ -535,7 +551,7 @@ class PCA_View(customtkinter.CTk):
 
         self.amp_factors_label = customtkinter.CTkLabel(self.split_frame_videos, text='PM Amplification Factors')
         self.amp_factors_label.grid(row=2, column=0, sticky='e', **self.grid_settings)
-        self.amp_factors_entry = customtkinter.CTkEntry(self.split_frame_videos, justify='center', textvariable=self.controller.amp_factors_entry)
+        self.amp_factors_entry = customtkinter.CTkEntry(self.split_frame_videos, justify='center', textvariable=self.controller.amp_factors_entry, corner_radius=self.corner_radius)
         self.amp_factors_entry.grid(row=2, column=1, sticky='w', **self.grid_settings)
 
         self.view_type_option_label = customtkinter.CTkLabel(self.split_frame_videos, text='View')
@@ -548,8 +564,7 @@ class PCA_View(customtkinter.CTk):
         self.save_animations_button = customtkinter.CTkButton(self.split_frame_videos, text='Save Animated Plots', command=self.controller.save_animated_plots, **self.button_settings)
         self.save_animations_button.grid(row=4, column=1, columnspan=1, sticky='nesw', **self.grid_settings)
 
-        self.animation_saving_progress_bar = customtkinter.CTkProgressBar(self.split_frame_videos, orientation='horizontal', border_width=5, border_color = ('#939BA2', '#4A4D50'), mode='determinate',
-                                                        height=32, corner_radius=5, indeterminate_speed=1, **self.progress_bar_settings)
+        self.animation_saving_progress_bar = customtkinter.CTkProgressBar(self.split_frame_videos, height=32, **self.progress_bar_settings)
         self.animation_saving_progress_bar.grid(row=5, column=0, columnspan=2, sticky='nsew', **self.grid_settings)
         self.animation_saving_progress_bar.grid_remove()
 
