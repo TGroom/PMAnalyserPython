@@ -202,7 +202,7 @@ class PCA_Model(SVD):
         total_weights_per_xyz = sum(weights) / 3
         num_of_markers = df.shape[1] // 3
         for index, row in df.iterrows():
-            weighted_sum = ((row.to_numpy() * weights).reshape(-1, 3)).sum(axis=0)  # Calculate the weighted sum of every three elements in the row
+            weighted_sum = ((row.to_numpy(dtype=float) * weights).reshape(-1, 3)).sum(axis=0)  # Calculate the weighted sum of every three elements in the row
             weighted_mean_arr = np.tile(weighted_sum / total_weights_per_xyz, num_of_markers)  # Calculate the weighted mean array and repeat it to match the original length of the row
             df.iloc[index] -= weighted_mean_arr  # Subtract the weighted mean array from the original row values
 
@@ -236,7 +236,7 @@ class PCA_Model(SVD):
             Heading [1, 0] implies no rotation.
             '''
             # Convert DataFrame to numpy array
-            points = df.to_numpy().reshape(-1, len(df.columns) // 3, 3)
+            points = df.to_numpy(dtype=float).reshape(-1, len(df.columns) // 3, 3)
             
             # Ensure heading is a numpy array
             heading = np.asarray(heading)
@@ -263,7 +263,7 @@ class PCA_Model(SVD):
             df[:] = rotated_points.reshape(-1, len(df.columns))
 
         def _calc_unit_vectors(df):
-            points = df.to_numpy()
+            points = df.to_numpy(dtype=float)
             points = points.reshape(points.shape[0], -1, 3)
             points = points.transpose((1, 0, 2))
             largest_indices = centre_refs.argsort()[-2:]
@@ -320,7 +320,6 @@ class PCA_Model(SVD):
             else:
                 _rotate_dataframe(df, normal_vector_drift)
 
-            # TODO: Improve this as it's only needed for plotting VVV
             self.orientation_original = _vector_to_angle(original_normal_vectors) + np.pi/2
             self.orientation_drift = _vector_to_angle(normal_vector_drift) + np.pi/2
             self.orientation_resultant = _vector_to_angle(_calc_normal_vectors(df))
@@ -350,12 +349,12 @@ class PCA_Model(SVD):
                 
                 return transformed_points
             
-            points = df.to_numpy()
+            points = df.to_numpy(dtype=float)
             points = points.reshape(points.shape[0], -1, 3)
             largest_indices = centre_refs.argsort()[-3:]
             plane_points_list = points[:, largest_indices[0:3]]
 
-            points_list = df.to_numpy().reshape(df.shape[0], -1, 3)
+            points_list = df.to_numpy(dtype=float).reshape(df.shape[0], -1, 3)
 
             if cutoff > 0.0:
                 filter_order = 5
@@ -391,7 +390,7 @@ class PCA_Model(SVD):
         Normalise the given data based on different options.
         '''
 
-        data_np = df.to_numpy()
+        data_np = df.to_numpy(dtype=float)
         self.d_norm = 1.0
 
         if method == 'MED (Mean Euclidean Distance)':  # Normalize data to mean euclidean distance MED
@@ -457,7 +456,7 @@ class PCA_Model(SVD):
             num_columns = len(df.columns)
             num_points = num_columns // 3  # Each point has x, y, z columns
             
-            cartesian_values = df.to_numpy()
+            cartesian_values = df.to_numpy(dtype=float)
             cartesian_values = cartesian_values.reshape(-1, num_points, 3)
             
             prev_theta = np.zeros(num_points)
@@ -492,7 +491,7 @@ class PCA_Model(SVD):
             num_columns = len(df.columns)
             num_points = num_columns // 3  # Each point has r, theta, phi columns
             
-            spherical_values = df.to_numpy()
+            spherical_values = df.to_numpy(dtype=float)
             spherical_values = spherical_values.reshape(-1, num_points, 3)
             
             x = spherical_values[:, :, 2] * np.cos(spherical_values[:, :, 1]) * np.cos(spherical_values[:, :, 0])
@@ -528,7 +527,7 @@ class PCA_Model(SVD):
         posture *= weight_vector_inv
         posture += p_0  # Reverse centring of each feature
         self.reverse_coordinate_transformation(posture, coord_transform_method)  # Reverse coordinate transformation is applicable
-        return posture.to_numpy()
+        return posture.to_numpy(dtype=float)
     
 
     def check_data_format(self, df, file_name):
@@ -587,9 +586,9 @@ class PCA_Model(SVD):
             )
 
         # Check for infinite values in the data
-        if np.isinf(df.to_numpy()).any():
-            inf_columns_indices = np.where(np.isinf(df.to_numpy()).any(axis=0))[0] + 1
-            inf_rows_indices = np.where(np.isinf(df.to_numpy()).any(axis=1))[0] + 1
+        if np.isinf(df.to_numpy(dtype=float)).any():
+            inf_columns_indices = np.where(np.isinf(df.to_numpy(dtype=float)).any(axis=0))[0] + 1
+            inf_rows_indices = np.where(np.isinf(df.to_numpy(dtype=float)).any(axis=1))[0] + 1
             raise Exception(
                 f'Data set "{file_name}" has infinite values in columns {inf_columns_indices} and rows {inf_rows_indices}. '
                 'Ensure all data is finite before proceeding.'
@@ -605,7 +604,7 @@ class PCA_Model(SVD):
             )
 
         # Check for non-numeric data
-        if not np.issubdtype(df.to_numpy().dtype, np.number):
+        if not np.issubdtype(df.to_numpy(dtype=float).dtype, np.number):
             raise Exception(
                 f'Data set "{file_name}" contains non-numeric values. Ensure all data entries are numeric before filtering, '
                 'normalising, and performing PCA.'
@@ -761,7 +760,7 @@ class PCA_Model(SVD):
         for i, scores in enumerate([pp_time_series, pv_time_series, pa_time_series]):
             pm_metrics_temp = {}
             for k in range(pp_time_series.shape[1]):
-                pk_scores = scores.iloc[:, k].to_numpy()
+                pk_scores = scores.iloc[:, k].to_numpy(dtype=float)
                 pm_metrics_temp[f'PC{k+1}'] = scores_metrics.get_all(pk_scores)
                 
                 # Only fit sin curves to pp_time_series (i == 0)
@@ -824,7 +823,6 @@ def loocv(X, max_pcs=25, subset_size=50):
         Source:
             https://stats.stackexchange.com/questions/93845/how-to-perform-cross-validation-for-pca-to-determine-the-number-of-principal-com
     '''
-    print(f'Performing Leave-One-Out Cross-Validation')
     n_samples, n_features = X.shape
     max_pcs = min(n_features, max_pcs)
     subset_size = min(n_samples, subset_size)
@@ -1048,7 +1046,7 @@ def flip_amp_with_phi(amplitudes, phi):
     return amplitudes, wrapped_phi_diffs
 
 
-class TrojePCA(SVD):
+class EigenwalkerPCA(SVD):
     def __init__(self, num_PCs_to_use=2):
         super().__init__()
         self.num_PCs_to_use = num_PCs_to_use
@@ -1061,7 +1059,7 @@ class TrojePCA(SVD):
         self.results = pd.DataFrame()
 
 
-    def preprocess(self, dfs: pd.DataFrame, walker_type='full') -> np.ndarray:
+    def preprocess(self, dfs: pd.DataFrame, wtype='full') -> np.ndarray:
         if len(dfs) == 0:
             raise IndexError("No data provided")
         
@@ -1071,17 +1069,20 @@ class TrojePCA(SVD):
         eigenpostures = np.empty((num_of_subjects, (self.num_PCs_to_use) * num_of_features))
         phis = np.empty((num_of_subjects, self.num_PCs_to_use - 1))
         omegas = np.empty((num_of_subjects, 1))
+        groups = []
 
         # Get loadings from first PC as a reference
-        Vt_ref = dfs[0].loc['Loadings'].to_numpy()[:, :self.num_PCs_to_use]
-
+        Vt_ref = dfs[0].loc['Loadings'].to_numpy(dtype=float)[:, :self.num_PCs_to_use]
+        
         for i, df in enumerate(dfs):
             ### Start
-            phi = df.loc['PP Metrics', 'Sin Approx. Phase'].to_numpy()[:self.num_PCs_to_use]
-            omega = df.loc['PP Metrics', 'Sin Approx. Omega'].to_numpy()[0]
-            amplitudes = df.loc['PP Metrics', 'Sin Approx. Amplitude'].to_numpy()[:self.num_PCs_to_use]
-            mean_posture = df.loc['Data Mean'].to_numpy()[0]
-            Vt = df.loc['Loadings'].to_numpy()[:, :self.num_PCs_to_use]
+            phi = df.loc['PP Metrics', 'Sin Approx. Phase'].to_numpy(dtype=float)[:self.num_PCs_to_use]
+            omega = df.loc['PP Metrics', 'Sin Approx. Omega'].to_numpy(dtype=float)[0]
+            amplitudes = df.loc['PP Metrics', 'Sin Approx. Amplitude'].to_numpy(dtype=float)[:self.num_PCs_to_use]
+            mean_posture = df.loc['Data Mean'].to_numpy(dtype=float)[0]
+            Vt = df.loc['Loadings'].to_numpy(dtype=float)[:, :self.num_PCs_to_use]
+            group = str(df.loc['Group'].index.get_level_values('level_1').tolist()[0])
+            groups.append(group)
 
             # Flip scores (and hence loadings) to keep them consistent accross all subjects
             Vt_dist = np.linalg.norm(Vt_ref - Vt, axis=0)
@@ -1101,41 +1102,60 @@ class TrojePCA(SVD):
             phis[i] = phi[1]
             omegas[i] = omega
 
-        if walker_type == 'full':
-            W = np.concatenate((mean_postures, eigenpostures, phis, omegas), axis=1)
+        full_walkers = np.concatenate((mean_postures, eigenpostures, phis, omegas), axis=1)
+        self.average_walker = np.mean(full_walkers, axis=0)
 
-        elif walker_type == 'structural':
+        if wtype == 'full':
+            W = full_walkers
+
+        elif wtype == 'structural':
             W = mean_postures
 
-        elif walker_type == 'dynamic':
+        elif wtype == 'dynamic':
             W = np.concatenate((eigenpostures, phis, omegas), axis=1)
+            
+        unique_groups = np.unique(groups)
+        group_masks = {unique_group: np.zeros(len(groups), dtype=int) for unique_group in unique_groups}
+        for idx, group in enumerate(groups):
+            group_masks[group][idx] = 1
+        grouped_average_walker = {}
+        for unique_group, mask in group_masks.items():
+            mask = np.array(mask, dtype=bool) # NEXT
+            grouped_average_walker[unique_group] = np.mean(W[mask], axis=0)
 
-        return W
+        return W, groups, grouped_average_walker
     
-    def project_troje(self, W: np.ndarray) -> np.ndarray:
+    def project_walkers(self, W: np.ndarray) -> np.ndarray:
         return (np.linalg.pinv(self.V) @ (W.T - self.W_0))[:-1]  # Pseudo-inverse of V to handle non-square matrix, remove last dimension as the number of dimensions is always 1 less than the number of samples
 
-    def fit_troje(self, W: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def fit_walkers(self, W: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         # "Whitening" the data (Same as this except without mean centring which is done by norm_weight_centre regardless: scaler = StandardScaler() W = scaler.fit_transform(W))
         u = np.std(W, axis=0)
         self.W_prime = W @ np.diag(1 / u)
         self.W_prime -= np.mean(self.W_prime, axis=0)  # Feature centring
-        print(f'Vector W_prime shape: {self.W_prime.shape}')
+        #print(f'Vector W_prime shape: {self.W_prime.shape}')
         self.fit(self.W_prime)  # Fit PCA on combined data of all subjects
 
         V_prime = self.components.T # Technically only [:, :-1] meaningful PCs (as constrainted by the number of samples/subjects the last PC is meaningless)
         self.V = np.diag(u) @ V_prime  # These are the eigenwalkers [loadings, pcs 1-N]
         self.W_0 = np.mean(W.T, axis=1).reshape(-1, 1)  # Average walker in each column
-        self.K = self.project_troje(W)
+        self.K = self.project_walkers(W)
 
         return self.W_0, self.V, self.K, self.eigenvalues
 
     def transform_k_to_w(self, k):
         return self.W_0.reshape(-1) + np.dot(k, self.V.T)
 
-    def reconstruct(self, w, num_of_eigenposture_features, sample_freq, d_norm, weight_vec, coord_transform):
+    def reconstruct(self, w, num_of_eigenposture_features, sample_freq, d_norm, weight_vec, coord_transform, wtype='full'):
         #print(w.shape)
         #print(num_of_eigenposture_features * (self.num_PCs_to_use + 1))
+        temp = self.average_walker.copy()
+        if wtype == 'structural':
+            temp[:len(w)] = w
+            w = temp
+        elif wtype == 'dynamic':
+            temp[num_of_eigenposture_features:] = w
+            w = temp
 
         # Deconstruct W
         eigenpostures = w[0:num_of_eigenposture_features * (self.num_PCs_to_use + 1)].reshape(self.num_PCs_to_use + 1, -1)
@@ -1165,90 +1185,3 @@ class TrojePCA(SVD):
         self.results = pd.concat([df0, df1, df2, df3, df4])
         return self.results
 
-
-
-'''
-
-if __name__ == "__main__":  # TODO: Check this still works
-
-    print("=== EXAMPLE ===")
-    base_dir = 'C:/Users/Thomas Groom/Desktop/Course-Notes/Individual Project/B/Data'#input('Folder Path:') #
-    file_path_list = [os.path.join(base_dir, f) for f in os.listdir(base_dir) if f.endswith('.csv')]
-
-    weights = np.array([0.0009, 0.0009, 0.013, 0.013, 0.013, 0.013, 0.013, 0.013, 0.013, 0.000175,
-               0.000175, 0.000275, 0.000150, 0.000050, 0.000275, 0.000275, 0.000475, 0.000250,
-               0.000050, 0.000575, 0.000575, 0.001075, 0.000600, 0.000100, 0.000175, 0.000175,
-               0.000275, 0.000150, 0.000050, 0.000275, 0.000275, 0.000475, 0.000250, 0.000050,
-               0.000575, 0.000575, 0.001075, 0.000600, 0.000100])
-    weights = np.repeat(weights, 3)
-    centre_refs = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    centre_refs = np.repeat(centre_refs, 3)
-    
-    # Preprocess the data for each subject and return a list of subject data.
-    subject_data_list = []
-    subject_means = []
-
-    for i, path in enumerate(file_path_list):
-        print(f'{i + 1} / {len(file_path_list)}')
-        # Read data files into a list
-        subject_data = pd.read_csv(path, delimiter=',', header=0)
-        pca_model = PCA_Model(55)
-        import json
-        dict = pca_model.__dict__
-        print(dict)
-        del dict['df']
-        jsonstr1 = json.dumps(dict)
-        print(jsonstr1)
-
-        # Group columns by their base name (e.g., 'marker_x', 'marker_y', 'marker_z')
-        column_struct = [list(group) for _, group in itertools.groupby(
-            list(subject_data), key=lambda string: string[:-1]
-        )]
-        markers = [group for group in column_struct if len(group) == 3]
-        subject_data = subject_data.loc[:, np.concatenate(markers)]
-
-        pca_model.remove_markers(subject_data, range(39, subject_data.shape[1]//3))
-        pca_model.remove_rows(subject_data, [])
-        pca_model.fill_gaps(subject_data, 'Linear')
-        pca_model.check_data_format(subject_data, path)
-        pca_model.flip_axes(subject_data, [True, False, True])
-        pca_model.filter(subject_data, 'Butterworth', 3, 10.0)
-        pca_model.centre(subject_data, 'Mean Marker Position', weights, centre_refs)
-        pca_model.align_orientation(subject_data, 'Off', centre_refs, 1.0)
-        pca_model.coordinate_transformation(subject_data, 'Off')
-        pca_model.norm_weight_centre(subject_data, 0, 'Manual Weight Vector', weights, 'MED (Mean Euclidean Distance)', centre_refs)
-        pca_model.check_data_format(subject_data, path)
-
-        subject_data_list.append(subject_data)
-        subject_means.append(pca_model.mean_of_data)
-
-    # Apply PCA on combined data of all subjects.
-    merged_data = pd.concat(subject_data_list, ignore_index=True)
-
-    pca_model.fit(merged_data)  # Fit PCA on combined data of all subjects
-    print(f'PCs:\n{pca_model.components[0:5, 0:5].T}')
-    print(f'Eigenvalues:\n{pca_model.eigenvalues[0:5]}')
-
-    press_naive, press_approx = loocv(merged_data.to_numpy(), 25, 500)
-
-    # Process and save PCA results
-    for i, subject_data in enumerate(subject_data_list):
-        results_df = pca_model.postprocess_pca_results(subject_data.columns,
-                                                        pca_model.transform(subject_data),
-                                                        pca_model.components,
-                                                        pca_model.eigenvalues,
-                                                        'Off', 'Off', 'Off', 3, 10, [],
-                                                        PRESS_Naive = press_naive,
-                                                        PRESS_Approx = press_approx)
-        
-        results_file_path = base_dir + f'/PCA_Results/Subject_{i+1}.csv'
-        if not os.path.exists(os.path.dirname(results_file_path)):
-            os.makedirs(os.path.dirname(results_file_path))
-        results_df.to_csv(results_file_path, encoding='utf-8', index=True)
-        
-        print(f'Results Saved: {os.path.basename(results_file_path)}')
-
-    print("DONE")
-'''

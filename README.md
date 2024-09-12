@@ -39,6 +39,8 @@ PCA Analyser Tool for Insect Data Kinematics in 3D Space (PMAnalyserPython)
     - [Delete Subject-Specific Rows](#delete-subject-specific-rows)
     - [Delete Subject Specific Markers](#delete-subject-specific-markers)
     - [Flip X, Y \& Z](#flip-x-y--z)
+    - [Eigenwalker PCA Population](#eigenwalker-pca-population)
+    - [Eigenwalker PCA Group](#eigenwalker-pca-group)
     - [Powerspektrum Plot](#powerspektrum-plot)
     - [Cross-Validation Plot](#cross-validation-plot)
     - [Orientation Plot](#orientation-plot)
@@ -48,7 +50,11 @@ PCA Analyser Tool for Insect Data Kinematics in 3D Space (PMAnalyserPython)
     - [Explained Variance](#explained-variance)
   - [Videos Tab](#videos-tab)
     - [Subject Time Series](#subject-time-series)
-    - [PM Visualisation](#pm-visualisation)
+    - [PC Loadings](#pc-loadings)
+    - [PC Reconstruction](#pc-reconstruction)
+  - [Eigenwalkers Tab](#eigenwalkers-tab)
+    - [Eigenwalker Space Reconstruction](#eigenwalker-space-reconstruction)
+    - [Projection Controls](#projection-controls)
   - [Settings Tab](#settings-tab)
     - [Theme Colour](#theme-colour)
     - [UI Scaling](#ui-scaling)
@@ -298,6 +304,16 @@ These checkboxes are found in the 'Input Data & Weights' section.
 These checkboxes allow the user to specify axes to be flipped/inverted. This option is useful when the input data axes are flipped in some subjects, or if it is desirable for positive Z to be up by convention, given data that has negative Z as the upward direction.
 
 
+### Eigenwalker PCA Population
+
+This feature allows you to assign a population to a subject. For further details on population usage, refer to the [Eigenwalkers Tab](#Eigenwalkers-Tab). Note that population assignment is case-insensitive. If no population is assigned, the subject defaults to the "None" population.
+
+
+### Eigenwalker PCA Group
+
+This feature enables you to assign a group to a subject. For additional information on group usage, see the [Eigenwalkers Tab](#Eigenwalkers-Tab). Group assignment is case-insensitive. 
+
+
 ### Powerspektrum Plot
 
 This plot is the first of three tabs found below the 'Input Data & Weights' section.
@@ -365,9 +381,31 @@ This tab shows animated plots of time series data as well as visualizing PCA loa
 This animated plot shows the real-time contribution of each principal component visualized on the skeleton of the subject. It also shows the time series activity in real-time using a bar chart for each PC.
 
 
-### PM Visualisation
+### PC Loadings
 
-This animated plot found in the 'PM Visualization' tab of the 'Videos' sidebar tab shows the 3D skeleton plots of the principal component loadings using a symmetric triangle wave sweep.
+This animated plot is found in the 'PC Loadings' tab of the 'Videos' sidebar tab and shows the 3D skeleton plots of the principal component loadings using a symmetric triangle wave sweep.
+
+### PC Reconstruction
+
+Located in the 'PC Reconstruction' tab of the 'Videos' sidebar, this animated plot displays reconstructed 3D skeletons using the first N principal component loadings (Eigenpostures). The bottom-right plot provides a comparison by showing the original motion, reconstructed using all loadings.
+
+## Eigenwalkers Tab
+
+Navigate to this tab via the button in the left sidebar panel. It visualises the Eigenwalker space by reconstructing motion onto a 3D skeleton plot.
+
+### Eigenwalker Space Reconstruction
+
+This 3D plot illustrates the motion of a point in Eigenwalker space, reconstructed onto an animated skeleton plot. The point's position in the Eigenwalker space is adjusted using the sliders on the right.
+
+### Projection Controls
+
+- **Population Selected:** This dropdown above the Eigenwalker reconstruction plot allows you to switch between PCA results for different subsets of subjects. Populations are specified using the [Eigenwalker PCA Population](#Eigenwalker-PCA-Population) entry.
+
+- **Walker Type:** Choose to view results from PCA on the full walker data, structural (Mean Posture) only, or dynamic (Eigenpostures, phase offsets, and fundamental frequency) only.
+
+- **Axes:** Select whether to control reconstruction using Eigenwalkers (Principal Components) or by linear interpolation along the average position of subject groups in Eigenwalker space. Subject groups are specified using the [Eigenwalker PCA Group](#Eigenwalker-PCA-Group) entry.
+  
+- **Sliders:** Use these sliders to adjust the point being reconstructed in Eigenwalker space.
 
 
 ## Settings Tab
@@ -513,9 +551,3 @@ This folder contains files with filenames in the form "{Subject Name}_preprocess
 ## Metadata File (\*_metadata.txt)
 
 This file stores a copy of the project file (in its native JSON format) used to generate the accompanying data. It can be used to check which settings and file paths were used to generate the data. Furthermore, if desired, the file extension could be changed from ".txt" to ".pca" turning it into a valid project file that can be opened to inspect the settings used.
-
-
-<!--
-# Example
-TODO...
--->

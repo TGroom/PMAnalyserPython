@@ -10,10 +10,8 @@ Attributes:
 """
 import os
 import tkinter as tk
-import tkinter.messagebox
 
 import numpy as np
-import pandas as pd
 from scipy import signal
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -47,36 +45,33 @@ class PCA_View(customtkinter.CTk):
         self.toolbar_score_plots = [[], [], []]
         self.pca_busy = False
         self.prev_subject_id = None
-        self.bug_plot_anim = None
-        self.loadings_anim = None
-        self.time_series_anim = None
         self.all_tooltips = []
 
         theme_color = ('#bfbfbf', '#1F6AA5')
         theme_color_hover = ('#b3b3b3', '#144870')
-        text_color = ('gray10', '#DCE4EE')
-        text_color_disabled = ('gray74', 'gray60')
+        self.text_color = ('gray10', '#DCE4EE')
+        self.text_color_disabled = ('gray74', 'gray60')
 
         self.frame_settings = {
             'fg_color': ('gray99', 'gray17'),
             'corner_radius': 0
         }
         self.sidebar_button_settings = {
-            'text_color': text_color,
+            'text_color': self.text_color,
             'fg_color': ('gray90', '#343638'),
             'hover_color': ('gray95', '#7A848D'),
-            'text_color_disabled': text_color_disabled,
+            'text_color_disabled': self.text_color_disabled,
             'corner_radius': self.corner_radius
         }
         self.frame_settings_level_2_tab = {
             'fg_color': ('gray96', 'gray21'),
-            'text_color': text_color,
+            'text_color': self.text_color,
             'segmented_button_fg_color': ('gray88', 'gray29'),
             'segmented_button_selected_color': theme_color,
             'segmented_button_selected_hover_color': theme_color_hover,
             'segmented_button_unselected_color': ('gray88', 'gray29'),
             'segmented_button_unselected_hover_color': ('gray95', 'gray41'),
-            'text_color_disabled': text_color_disabled,
+            'text_color_disabled': self.text_color_disabled,
             'corner_radius': self.corner_radius
         }
         self.frame_settings_level_2_scroll = {
@@ -87,8 +82,8 @@ class PCA_View(customtkinter.CTk):
         self.button_settings = {
             'fg_color': theme_color,
             'hover_color': theme_color_hover,
-            'text_color': text_color,
-            'text_color_disabled': text_color_disabled,
+            'text_color': self.text_color,
+            'text_color_disabled': self.text_color_disabled,
             'corner_radius': self.corner_radius
         }
         self.progress_bar_settings = {
@@ -102,16 +97,16 @@ class PCA_View(customtkinter.CTk):
             'corner_radius': self.corner_radius
         }
         self.option_menu_settings = {
-            'text_color': text_color,
+            'text_color': self.text_color,
             'fg_color': ('#e4e6e7', '#404244'),
             'button_color': ('#d7d9da', '#565B5E'),
             'button_hover_color': self.sidebar_button_settings['hover_color'],
-            'text_color_disabled': text_color_disabled,
+            'text_color_disabled': self.text_color_disabled,
             'corner_radius': self.corner_radius
         }
         self.entry_settings = {
-            'text_color': text_color,
-            'text_color_disabled': text_color_disabled,
+            'text_color': self.text_color,
+            'text_color_disabled': self.text_color_disabled,
             'corner_radius': self.corner_radius
         }
         self.checkbox_settings = {
@@ -141,7 +136,6 @@ class PCA_View(customtkinter.CTk):
         # Create sidebar frame with widgets
         sidebar_frame = customtkinter.CTkFrame(self, width=10, **self.frame_settings)
         sidebar_frame.grid(row=0, column=0, sticky='nsw')
-        sidebar_frame.grid_rowconfigure(8, weight=1)
 
         # Add logo label to sidebar
         logo_label = customtkinter.CTkLabel(sidebar_frame, text='PMAnalyserPython', font=customtkinter.CTkFont(size=20, weight='bold'))
@@ -149,9 +143,9 @@ class PCA_View(customtkinter.CTk):
 
         # PCA Analysis frame
         self.pca_analysis_frame = customtkinter.CTkFrame(self, **self.frame_settings)
-        self.pca_analysis_frame.grid_columnconfigure((2, 3, 4), weight=1, minsize=1)
         self.pca_analysis_frame.grid_columnconfigure(0, weight=0, minsize=150)
         self.pca_analysis_frame.grid_columnconfigure(1, weight=0, minsize=300)
+        self.pca_analysis_frame.grid_columnconfigure((2, 3, 4), weight=1, minsize=1)
         self.pca_analysis_frame.grid_columnconfigure(5, weight=1, minsize=400)
         self.pca_analysis_frame.grid_rowconfigure(0, weight=0, minsize=30)
         self.pca_analysis_frame.grid_rowconfigure((1, 2, 3, 4, 5, 6, 7), weight=2, minsize=1)
@@ -159,30 +153,30 @@ class PCA_View(customtkinter.CTk):
 
         # Visualisation Plots frame
         self.visualisation_plots_frame = customtkinter.CTkFrame(self, **self.frame_settings)
-        self.visualisation_plots_frame.grid_columnconfigure((2, 3, 4, 5), weight=1, minsize=1)
         self.visualisation_plots_frame.grid_columnconfigure(0, weight=0, minsize=150)
         self.visualisation_plots_frame.grid_columnconfigure(1, weight=0, minsize=300)
+        self.visualisation_plots_frame.grid_columnconfigure((2, 3, 4, 5), weight=1, minsize=1)
         self.visualisation_plots_frame.grid_columnconfigure(6, weight=1, minsize=400)
         self.visualisation_plots_frame.grid_rowconfigure(0, weight=0, minsize=30)
         self.visualisation_plots_frame.grid_rowconfigure(1, weight=1, minsize=100)
 
         # Animation frame
         self.videos_frame = customtkinter.CTkFrame(self, **self.frame_settings)
-        self.videos_frame.grid_columnconfigure((2, 3, 4, 5), weight=1, minsize=1)
         self.videos_frame.grid_columnconfigure(0, weight=0, minsize=150)
         self.videos_frame.grid_columnconfigure(1, weight=0, minsize=300)
+        self.videos_frame.grid_columnconfigure((2, 3, 4, 5), weight=1, minsize=1)
         self.videos_frame.grid_columnconfigure(6, weight=1, minsize=400)
         self.videos_frame.grid_rowconfigure(0, weight=0, minsize=30)
         self.videos_frame.grid_rowconfigure(1, weight=1, minsize=100)
         
         # Animation frame
         self.eigenwalkers_frame = customtkinter.CTkFrame(self, **self.frame_settings)
-        self.eigenwalkers_frame.grid_columnconfigure((2, 3, 4, 5), weight=1, minsize=1)
         self.eigenwalkers_frame.grid_columnconfigure(0, weight=0, minsize=150)
         self.eigenwalkers_frame.grid_columnconfigure(1, weight=0, minsize=300)
-        self.eigenwalkers_frame.grid_columnconfigure(6, weight=1, minsize=400)
+        self.eigenwalkers_frame.grid_columnconfigure(2, weight=1, minsize=200)
+        self.eigenwalkers_frame.grid_columnconfigure(3, weight=2, minsize=200)
         self.eigenwalkers_frame.grid_rowconfigure(0, weight=0, minsize=30)
-        self.eigenwalkers_frame.grid_rowconfigure(1, weight=1, minsize=100)
+        self.eigenwalkers_frame.grid_rowconfigure(1, weight=2, minsize=400)
 
         # Settings frame
         self.settings_frame = customtkinter.CTkFrame(self, **self.frame_settings)
@@ -214,15 +208,15 @@ class PCA_View(customtkinter.CTk):
         self.subject_selection_option_menu_3 = customtkinter.CTkOptionMenu(self.videos_frame, values=['None'], command=lambda x: (self._update_subject_selection(x), self._video_plot_tab_selection()), variable=self.controller.current_subject_id, **self.option_menu_settings)
         self.subject_selection_option_menu_3.grid(row=0, column=1, sticky='we', padx=(10, 10), pady=(10, 0))
 
-        eigenwalker_group_selection_label = customtkinter.CTkLabel(self.eigenwalkers_frame, text='Group Selected')
-        eigenwalker_group_selection_label.grid(row=0, column=0, sticky='e', padx=(10, 10), pady=(10, 0))
-        self.eigenwalker_group_option_menu = customtkinter.CTkOptionMenu(self.eigenwalkers_frame, values=['None'], variable=self.controller.current_eigenwalker_group_id, **self.option_menu_settings)
-        self.eigenwalker_group_option_menu.configure(command=lambda x: (self._show_eigenwalker_space()))
-        self.eigenwalker_group_option_menu.grid(row=0, column=1, sticky='we', padx=(10, 10), pady=(10, 0))
-
+        eigenwalker_population_selection_label = customtkinter.CTkLabel(self.eigenwalkers_frame, text='Population Selected')
+        eigenwalker_population_selection_label.grid(row=0, column=0, sticky='e', padx=(10, 10), pady=(10, 0))
+        self.eigenwalker_population_option_menu = customtkinter.CTkOptionMenu(self.eigenwalkers_frame, values=['None'], variable=self.controller.current_eigenwalker_population_id, **self.option_menu_settings)
+        self.eigenwalker_population_option_menu.configure(command=lambda x: (self._show_eigenwalker_space()))
+        self.eigenwalker_population_option_menu.grid(row=0, column=1, sticky='we', padx=(10, 10), pady=(10, 0))
 
         # Sidebar Buttons
         self.sidebar_buttons = [
+            customtkinter.CTkButton(sidebar_frame, text='New Project File', command=self.controller.new_project_file, **self.sidebar_button_settings),
             customtkinter.CTkButton(sidebar_frame, text='Load Project File', command=self.controller.load_project_file, **self.sidebar_button_settings),
             customtkinter.CTkButton(sidebar_frame, text='Save Project File', command=self.controller.save_project_file, **self.sidebar_button_settings),
             customtkinter.CTkButton(sidebar_frame, text='PCA Analysis', command=lambda: (self._show_pane(self.pca_analysis_frame), self._show_bug_plot()), **self.sidebar_button_settings),
@@ -436,10 +430,15 @@ class PCA_View(customtkinter.CTk):
         self.subject_flip_z_checkbox = customtkinter.CTkCheckBox(self.flip_axes_frame, text='', **self.checkbox_settings)
         self.subject_flip_z_checkbox.grid(row=0, column=5, sticky='nw', **self.grid_settings)
 
+        subject_eigenwalker_population_label = customtkinter.CTkLabel(self.plot_3d_frame, text='Eigenwalker PCA Population')
+        subject_eigenwalker_population_label.grid(row=7, column=0, sticky='e', **self.grid_settings)
+        self.subject_eigenwalker_population_entry = customtkinter.CTkEntry(self.plot_3d_frame, justify='center', corner_radius=self.corner_radius)
+        self.subject_eigenwalker_population_entry.grid(row=7, column=1, sticky='we', **self.grid_settings)
+        
         subject_eigenwalker_group_label = customtkinter.CTkLabel(self.plot_3d_frame, text='Eigenwalker PCA Group')
-        subject_eigenwalker_group_label.grid(row=7, column=0, sticky='e', **self.grid_settings)
+        subject_eigenwalker_group_label.grid(row=8, column=0, sticky='e', **self.grid_settings)
         self.subject_eigenwalker_group_entry = customtkinter.CTkEntry(self.plot_3d_frame, justify='center', corner_radius=self.corner_radius)
-        self.subject_eigenwalker_group_entry.grid(row=7, column=1, sticky='we', **self.grid_settings)
+        self.subject_eigenwalker_group_entry.grid(row=8, column=1, sticky='we', **self.grid_settings)
 
         # Initialise plots and videos
         self._initialise_plots()
@@ -528,6 +527,12 @@ class PCA_View(customtkinter.CTk):
 
     def _initialise_videos(self):
         '''Initialise video-related UI elements.'''
+        self.bug_plot_anim = None
+        self.loadings_anim = None
+        self.time_series_anim = None
+        self.reconstruction_anim = None
+        self.eigenwalker_anim = None
+
         self.video_visualisation = customtkinter.CTkTabview(master=self.videos_frame, command=self._video_plot_tab_selection, **self.frame_settings_level_2_tab)
         self.video_visualisation.grid(row=1, rowspan=1, column=0, columnspan=6, sticky='nsew', **self.frame_grid_settings)
         self.video_visualisation.add('Subject Time Series')
@@ -598,10 +603,24 @@ class PCA_View(customtkinter.CTk):
         self.fig_pc_reconstruction = plt.Figure(figsize=(16, 8), dpi=80)
         gs = self.fig_pc_reconstruction.add_gridspec(2, 4)
         self.stick_figures_pc_reconstruction = [self.fig_pc_reconstruction.add_subplot(gs[i, j], projection='3d') for i in range(2) for j in range(4)]
+        
+        self.eigenwalkers_subframe = customtkinter.CTkScrollableFrame(self.eigenwalkers_frame, label_text='Projection Controls', **self.frame_settings_level_2_scroll)
+        self.eigenwalkers_subframe.grid(row=0, rowspan=2, column=3, columnspan=2, sticky='nsew', **self.frame_grid_settings)
+        self.eigenwalkers_subframe.columnconfigure((0, 1), weight=2)
 
+        self.custom_slider_var = tk.DoubleVar()
+        self.custom_slider_label = customtkinter.CTkLabel(self.eigenwalkers_subframe, text=f'Custom')
+        self.custom_slider = customtkinter.CTkSlider(self.eigenwalkers_subframe, from_=-1, to=1, variable=self.custom_slider_var)
+        self.custom_slider_label.grid(row=2, column=0, sticky='e', **self.grid_settings)
+        self.custom_slider_label.configure(text_color=self.text_color_disabled)
+        self.custom_slider.grid(row=2, column=1, sticky='ew', **self.grid_settings)
+        self.custom_slider.configure(state='disabled')
 
-        self.eigenwalkers_subframe = customtkinter.CTkScrollableFrame(self.eigenwalkers_frame)
-        self.eigenwalkers_subframe.grid(row=1, column=0, columnspan=10, sticky='nsew', padx=(10, 10), pady=(10, 0))
+        self.slider_labels = []
+        self.sliders = []
+
+        self.eigenwalkers_subframe2 = customtkinter.CTkScrollableFrame(self.eigenwalkers_frame, label_text='Eigenwalker Space Reconstruction', **self.frame_settings_level_2_scroll)
+        self.eigenwalkers_subframe2.grid(row=1, column=0, columnspan=3, sticky='nsew', **self.frame_grid_settings)
         
         self.eigenwalker_figAnim3D = plt.Figure(figsize=(8, 8), dpi=80)
         self.eigenwalker_axes = self.eigenwalker_figAnim3D.add_subplot(111, projection='3d')
@@ -609,11 +628,21 @@ class PCA_View(customtkinter.CTk):
         self.eigenwalker_axes.set_xlabel('X')
         self.eigenwalker_axes.set_ylabel('Y')
         self.eigenwalker_axes.set_zlabel('Z')
-        self.slider_ax_1 = self.eigenwalker_figAnim3D.add_axes([0.1, 0.15, 0.65, 0.03])
-        self.slider_ax_2 = self.eigenwalker_figAnim3D.add_axes([0.1, 0.1, 0.65, 0.03])
-        self.eigenwalker_canvas = FigureCanvasTkAgg(self.eigenwalker_figAnim3D, self.eigenwalkers_subframe)
-        self.eigenwalker_canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.eigenwalker_canvas.draw()
+        self.eigenwalker_canvas = []
+
+        self.eigenwalker_reconstruct_type_label = customtkinter.CTkLabel(self.eigenwalkers_subframe, text='Walker Type')
+        self.eigenwalker_reconstruct_type_label.grid(row=0, column=0, sticky='e', **self.grid_settings)
+        self.eigenwalker_reconstruct_type = tk.StringVar()
+        self.eigenwalker_reconstruct_type_option_menu = customtkinter.CTkOptionMenu(self.eigenwalkers_subframe, values=['Full', 'Structural', 'Dynamic'], variable=self.eigenwalker_reconstruct_type, command=self._show_eigenwalker_space, **self.option_menu_settings)
+        self.eigenwalker_reconstruct_type_option_menu.grid(row=0, column=1, sticky='new', **self.grid_settings)
+        self.eigenwalker_reconstruct_type_option_menu.set('Full')
+
+        self.eigenwalker_reconstruct_type_label = customtkinter.CTkLabel(self.eigenwalkers_subframe, text='Axes')
+        self.eigenwalker_reconstruct_type_label.grid(row=1, column=0, sticky='e', **self.grid_settings)
+        self.eigenwalker_reconstruct_axes = tk.StringVar()
+        self.eigenwalker_reconstruct_axes_option_menu = customtkinter.CTkOptionMenu(self.eigenwalkers_subframe, values=['Eigenwalkers (PCs)'], variable=self.eigenwalker_reconstruct_axes, command=self._show_eigenwalker_space, **self.option_menu_settings)
+        self.eigenwalker_reconstruct_axes_option_menu.grid(row=1, column=1, sticky='new', **self.grid_settings)
+        self.eigenwalker_reconstruct_axes_option_menu.set('Eigenwalkers (PCs)')
 
 
     def _initialise_tooltips(self):
@@ -644,7 +673,9 @@ class PCA_View(customtkinter.CTk):
         self.all_tooltips.append(CreateToolTip(self.subject_flip_x_checkbox, text="Specify axes to flip\nUseful for correcting flipped data\nor adjusting Z-axis direction"))
         self.all_tooltips.append(CreateToolTip(self.subject_flip_y_checkbox, text="Specify axes to flip\nUseful for correcting flipped data\nor adjusting Z-axis direction"))
         self.all_tooltips.append(CreateToolTip(self.subject_flip_z_checkbox, text="Specify axes to flip\nUseful for correcting flipped data\nor adjusting Z-axis direction"))
-        self.all_tooltips.append(CreateToolTip(self.subject_eigenwalker_group_entry, text="..."))
+        self.all_tooltips.append(CreateToolTip(self.subject_eigenwalker_population_entry, text="Use this entry to perform\nseparate Eigenwalker analyses\nacross a subset of the subjects."))
+        self.all_tooltips.append(CreateToolTip(self.subject_eigenwalker_group_entry, text="Use this entry to assign subjects to the\nindependent variable you're changing.\nYou can then control the axes of\nmean values for each group combination\nin the Eigenwalker space."))
+        self.all_tooltips.append(CreateToolTip(self.eigenwalker_reconstruct_type_option_menu, text="Whether to use the full,\nstructural-only, or dynamic-only\nEigenwalker PCA."))
         self.all_tooltips.append(CreateToolTip(self.appearance_mode_option_menu, text="This option changes the theme of the UI between 'System', 'Light' or 'Dark'"))
         self.all_tooltips.append(CreateToolTip(self.scaling_option_menu, text="This option changes the scale of the UI"))
         self.all_tooltips.append(CreateToolTip(self.amp_factors_entry, text="Amplify 3D plot motion\nExample: '[2, 3]' amplifies\nPC1 by 2x and PC2 by 3x\nPress 'Refresh Animations' to apply"))
@@ -661,7 +692,7 @@ class PCA_View(customtkinter.CTk):
 
 
     def _ask_save_as_filename(self):
-        file_path = tk.filedialog.asksaveasfilename(parent=self, title='Choose Save Folder', filetypes=[('PCA', '.pca')])
+        file_path = tk.filedialog.asksaveasfilename(parent=self, title='Choose Save File', defaultextension=".pca", filetypes=[('PCA', '.pca')])
         return file_path
 
 
@@ -696,25 +727,25 @@ class PCA_View(customtkinter.CTk):
             # If the quit dialog exists, bring it to focus
             self.quit_dialog.focus()
 
-        if action == 'cancel':
-            return
-        elif action == 'save':
+        if action == 'save':
             self.controller.save_project_file()
+        
+        return action
 
 
     def _show_pane(self, pane):
         '''
         Show the specified pane and update sidebar buttons accordingly.
         '''
-
+        non_panel_buttons = 3
         # Loop through widgets, hide them, and update sidebar button colors
         for i, widget in enumerate(self.sidebar_frames_list):
             widget.grid_forget()
             # Change color of sidebar buttons
-            self.sidebar_buttons[i + 2].configure(fg_color=self.sidebar_button_settings['fg_color'])
+            self.sidebar_buttons[i + non_panel_buttons].configure(fg_color=self.sidebar_button_settings['fg_color'])
 
         # Change color of currently opened pane sidebar button
-        self.sidebar_buttons[self.sidebar_frames_list.index(pane) + 2].configure(fg_color=self.option_menu_settings['button_color'])
+        self.sidebar_buttons[self.sidebar_frames_list.index(pane) + non_panel_buttons].configure(fg_color=self.option_menu_settings['button_color'])
 
         # Display the specified pane
         pane.grid(row=0, column=1, sticky='nsew')
@@ -741,9 +772,7 @@ class PCA_View(customtkinter.CTk):
 
 
     def _get_table_values(self, column: str):
-        '''
-        Get values from the specified column of the table.
-        '''
+        '''Get values from the specified column of the table.'''
         values = []
         for item_id in self.table.get_children():
             
@@ -782,9 +811,12 @@ class PCA_View(customtkinter.CTk):
 
     def _show_bug_plot(self):
         '''Display 3D animation of bug movement and Frequency Spectrum plot.'''
-        print('Refresh 3D Animation')
+        self._destroy_all_canvas()
         
         if self.controller.current_subject_id.get() not in self.controller.subj_pca_models:
+            return
+        
+        if not self.controller.current_subj:
             return
         
         if self.controller.current_subj.bug_plot_data.empty:
@@ -793,9 +825,10 @@ class PCA_View(customtkinter.CTk):
         self.BugPlot.cla()
 
         frame_count = len(self.controller.current_subj.bug_plot_data)
+        fs = self.controller.configuration.get_freq
 
         self.current_full_skeleton = self.controller.current_subj.skeleton
-        self.set_3d_axis_limits(self.BugPlot,  self.controller.current_subj.bug_plot_data.iloc[:].to_numpy(), 0.95)
+        self.set_3d_axis_limits(self.BugPlot,  self.controller.current_subj.bug_plot_data.iloc[:].to_numpy(dtype=float), 0.95)
         self.BugPlot.set_xlabel('X')
         self.BugPlot.set_ylabel('Y')
         self.BugPlot.set_zlabel('Z')
@@ -813,43 +846,38 @@ class PCA_View(customtkinter.CTk):
 
         def _animate(frame_number):
             '''Animate the bug movement.'''
-            if self.controller.current_subj.bug_plot_data.empty or self.pca_busy:
-                for line in self.lines2:
-                    line.set_data([], [])
-                    line.set_3d_properties([])
-                self.figAnim3D.suptitle(f'{self.controller.current_subject_id.get()} | Row: -  | Time: -')
-                self.figAnim3D.canvas.draw()
-                return self.lines2
+            if self.controller.current_subj:
+                if not self.controller.current_subj.bug_plot_data.empty and not self.pca_busy:
+                    coords = self.controller.current_subj.bug_plot_data.iloc[frame_number].to_numpy(dtype=float).reshape(-1, 3)
+                    
+                    for i, (start, end) in enumerate(self.current_full_skeleton):
+                        if len(coords) > start and len(coords) > end:  # Only plot as many skeleton lines as there are data points
+                            x_values = [coords[start, 0], coords[end, 0]]
+                            y_values = [coords[start, 1], coords[end, 1]]
+                            z_values = [coords[start, 2], coords[end, 2]]
+                            self.lines2[i].set_data(x_values, y_values)
+                            self.lines2[i].set_3d_properties(z_values)
+                    
+                    self.figAnim3D.suptitle(f'{self.controller.current_subject_id.get()} | Row: {frame_number}/{frame_count} | Time: {frame_number/fs:.2f} s')
+                    self.figAnim3D.canvas.draw()
+                    return self.lines2
             
-            else:
-                coords = self.controller.current_subj.bug_plot_data.iloc[frame_number].to_numpy().reshape(-1, 3)
-                
-                for i, (start, end) in enumerate(self.current_full_skeleton):
-                    if len(coords) > start and len(coords) > end:  # Only plot as many skeleton lines as there are data points
-                        x_values = [coords[start, 0], coords[end, 0]]
-                        y_values = [coords[start, 1], coords[end, 1]]
-                        z_values = [coords[start, 2], coords[end, 2]]
-                        self.lines2[i].set_data(x_values, y_values)
-                        self.lines2[i].set_3d_properties(z_values)
-                
-                fs = self.controller.current_subj.sample_freq
-                self.figAnim3D.suptitle(f'{self.controller.current_subject_id.get()} | Row: {frame_number}/{frame_count} | Time: {frame_number/fs:.2f} s')
-                self.figAnim3D.canvas.draw()
-                return self.lines2
+            for line in self.lines2:
+                line.set_data([], [])
+                line.set_3d_properties([])
+            self.figAnim3D.suptitle(f'{self.controller.current_subject_id.get()} | Row: -  | Time: -')
+            self.figAnim3D.canvas.draw()
+            return self.lines2
         
         # Set up the tk canvas
-        self._destroy_all_canvas()
         self.canvas = FigureCanvasTkAgg(self.figAnim3D, master=self.plot_3d_subframe)
         self.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)#.grid(row=0, column=0, sticky='nsew', **self.grid_settings)
         self.figAnim3D.suptitle(self.controller.current_subject_id.get())
 
-        
-        fs = self.controller.current_subj.sample_freq
-        
         # Create animation
         self.bug_plot_anim = animation.FuncAnimation(
             self.figAnim3D, _animate, frames=frame_count,
-            init_func=_init_animation, repeat=True, blit=True, interval=0#int(1000 / fs)
+            init_func=_init_animation, repeat=True, blit=True, interval=1000 / fs
         )
         
         self.canvas.draw()
@@ -859,10 +887,9 @@ class PCA_View(customtkinter.CTk):
         if df.empty:
             raise TerminatingError(f"No PCA results found for {self.controller.current_subject_id.get()} (PATH={self.controller.current_subj.results_file_path}). Try saving the project and running PCA again.")
         
-        time_series_PP1 = np.array(df.loc[('PP Time Series (Position)')].iloc[:, 0])
-
+        time_series_PP1 = np.array(df.loc[('PP Time Series (Position)')].iloc[:, 0], dtype=float)
         self.plot_welch.clear()
-        self.plot_welch.magnitude_spectrum(np.array(time_series_PP1), Fs=fs, scale='dB')
+        self.plot_welch.magnitude_spectrum(time_series_PP1, Fs=fs, scale='dB')
         self.plot_welch.set_ylabel('PSD [dB]')
         self.plot_welch.set_xlabel('Frequency [Hz]')
         self.plot_welch.title.set_text(f'Frequency Spectrum of PP1 [{self.controller.current_subject_id.get()}]')
@@ -909,9 +936,9 @@ class PCA_View(customtkinter.CTk):
         self.plot_loocv_2.clear()
         if self.controller.configuration.loocv.get() and 'PRESS Naive' in df.index and 'PRESS Approx' in df.index:
             # Plotting the results
-            PRESS_naive = np.array(df.loc[('PRESS Naive')])[0]
+            PRESS_naive = np.array(df.loc[('PRESS Naive')], dtype=float)[0]
             PRESS_naive = PRESS_naive[~np.isnan(PRESS_naive)]
-            PRESS_approx = np.array(df.loc[('PRESS Approx')])[0]
+            PRESS_approx = np.array(df.loc[('PRESS Approx')], dtype=float)[0]
             PRESS_approx = PRESS_approx[~np.isnan(PRESS_approx)]
             
             # Plot Naive Reconstruction Error
@@ -945,14 +972,19 @@ class PCA_View(customtkinter.CTk):
         print('Refresh Plots')
         self._destroy_all_canvas()
 
+        if not self.controller.current_subj:
+            Warning(f"No PCA results found. Try saving the project and running PCA again.")
+            return
+        
         df = self.controller.current_subj.results
         if df.empty:
-            raise TerminatingError(f"No PCA results found for {self.controller.current_subject_id.get()} (PATH={self.controller.current_subj.results_file_path}). Try saving the project and running PCA again.")
+            Warning(f"No PCA results found for {self.controller.current_subject_id.get()} (PATH={self.controller.current_subj.results_file_path}). Try saving the project and running PCA again.")
+            return
         
         num_of_PCs_to_show = self.controller.configuration.get_ev_num_of_pcs
         self._plot_ev(df, num_of_PCs_to_show)
         self._plot_scores(df, num_of_PCs_to_show)
-            
+
 
     def _plot_ev(self, df, num_of_PCs_to_show):
         '''Plot eigenvalue-related charts.'''
@@ -964,7 +996,7 @@ class PCA_View(customtkinter.CTk):
         ]
 
         for label, plot, title, ylabel, plot_type in plot_configs:
-            data = df.loc[label].dropna(axis=1).to_numpy()[0][:num_of_PCs_to_show] * 100
+            data = df.loc[label].dropna(axis=1).to_numpy(dtype=float)[0][:num_of_PCs_to_show] * 100
             plot.clear()
             if plot_type == 'bar':
                 plot.bar(range(1, len(data) + 1), data)
@@ -1016,7 +1048,7 @@ class PCA_View(customtkinter.CTk):
         ax.clear()
         fs = self.controller.current_subj.sample_freq
         tt = np.linspace(0, scores.iloc[:, plot_index].shape[0] / fs, scores.iloc[:, plot_index].shape[0])
-        ax.plot(tt, scores.iloc[:, plot_index].to_numpy(), color=color, lw=0.75)
+        ax.plot(tt, scores.iloc[:, plot_index].to_numpy(dtype=float), color=color, lw=0.75)
 
         if self.controller.configuration.sine_approx.get() and show_sin_approx:
             def sinfunc(t, A, w, p):
@@ -1036,26 +1068,31 @@ class PCA_View(customtkinter.CTk):
 
     def _video_plot_tab_selection(self, selection=None, *args):
         '''Switch video plot tab based on selection.'''
-
+        
+        if not self.controller.current_subj:
+            Warning(f"No PCA results found. Try saving the project and running PCA again.")
+            return
+        
         df = self.controller.current_subj.results
         if df.empty:
-            raise TerminatingError(f"No PCA results found for {self.controller.current_subject_id.get()} (PATH={self.controller.current_subj.results_file_path}). Try saving the project and running PCA again.")
+            Warning(f"No PCA results found for {self.controller.current_subject_id.get()} (PATH={self.controller.current_subj.results_file_path}). Try saving the project and running PCA again.")
+            return
         
         self.initial_synchronization_done = False
         
-        p_0 = df.loc[('Data Mean')].to_numpy()  # Input data mean
-        p = df.loc[('Loadings')].to_numpy()  # PC Loadings
-        self.controller.current_subj.d_norm = float(df.loc['Normalisation Factor'].to_numpy()[0, 0])
-        self.controller.current_subj.weight_vector = df.loc['Weight Vector'].to_numpy()[0]
+        p_0 = df.loc[('Data Mean')].to_numpy(dtype=float)  # Input data mean
+        p = df.loc[('Loadings')].to_numpy(dtype=float)  # PC Loadings
+        self.controller.current_subj.d_norm = df.loc['Normalisation Factor'].to_numpy(dtype=float)[0, 0]
+        self.controller.current_subj.weight_vector = df.loc['Weight Vector'].to_numpy(dtype=float)[0]
 
         # Custom PC scaling from user input
         amplification_factors = self.controller.configuration.get_amp_factors
         amplification_factors = amplification_factors[:8] + [1] * max(0, 8 - len(amplification_factors))
 
         scores = {
-            'PP': df.loc['PP Time Series (Position)'].to_numpy(),
-            'PV': df.loc['PV Time Series (Velocity)'].to_numpy(),
-            'PA': df.loc['PA Time Series (Acceleration)'].to_numpy()
+            'PP': df.loc['PP Time Series (Position)'].to_numpy(dtype=float),
+            'PV': df.loc['PV Time Series (Velocity)'].to_numpy(dtype=float),
+            'PA': df.loc['PA Time Series (Acceleration)'].to_numpy(dtype=float)
         }
 
 
@@ -1076,18 +1113,18 @@ class PCA_View(customtkinter.CTk):
         
         if not selection:
             selection = self.video_visualisation.get()
-
         if selection == 'Subject Time Series' or selection == 1:
             self._show_subject_time_series(scores, p_0, p, amplification_factors)
         elif selection == 'PC Loadings' or selection == 2:
             self._show_pc_loadings(p_0, p, amplification_factors)
         else:
-            self._show_pc_reconstruction(scores['PP'], p_0, p, amplification_factors)  #sin_approx_score
+            self._show_pc_reconstruction(scores['PP'], p_0, p, amplification_factors)
 
 
     def _show_subject_time_series(self, scores, p_0, p, amplification_factors):
         '''Refresh and display the subject time series animations.'''
         print('Refresh Time Series')
+        self._destroy_all_canvas()
         
         # List to store reconstructed data for each principal component
         reconstructed_data_pcs = [
@@ -1145,7 +1182,6 @@ class PCA_View(customtkinter.CTk):
             return [*bar_container1, *bar_container2, *bar_container3, *np.concatenate(self.lines)]
 
         # Set up the tk canvas
-        self._destroy_all_canvas()
         self.canvas_video_time_series = FigureCanvasTkAgg(self.fig_video_plots, master=self.time_series_scroll_frame) #self.video_visualisation.tab('Subject Time Series'))
         self.canvas_video_time_series.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
         self.fig_video_plots.suptitle(f'Time Series [{self.controller.current_subject_id.get()}]')
@@ -1186,6 +1222,7 @@ class PCA_View(customtkinter.CTk):
     def _show_pc_loadings(self, p_0, p, amplification_factors):
         '''Refresh and animate PC loadings visualization.'''
         print('Refresh PC Loadings')
+        self._destroy_all_canvas()
         
         frame_count = 25  # Number of frames animation should last (lower number increases sweep speed)
 
@@ -1238,7 +1275,6 @@ class PCA_View(customtkinter.CTk):
             return np.concatenate(self.lines_loadings)
 
         # Set up the tk canvas
-        self._destroy_all_canvas()
         self.canvas_pc_loadings = FigureCanvasTkAgg(self.fig_pc_loadings, master=self.video_visualisation.tab('PC Loadings'))
         self.canvas_pc_loadings.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
         self.fig_pc_loadings.canvas.mpl_connect('motion_notify_event', self._synchronize_rotation)
@@ -1253,7 +1289,7 @@ class PCA_View(customtkinter.CTk):
         fs = self.controller.current_subj.sample_freq
         self.loadings_anim = animation.FuncAnimation(
             self.fig_pc_loadings, _animate, frames=frame_count,
-            init_func=_init_animation, repeat=True, blit=True, interval=1000/fs
+            init_func=_init_animation, repeat=True, blit=True, interval=1000 / fs
         )
 
         self.canvas_pc_loadings.draw()
@@ -1262,6 +1298,7 @@ class PCA_View(customtkinter.CTk):
     def _show_pc_reconstruction(self, pp_score, p_0, p, amplification_factors):
         '''Refresh and animate PC reconstruction visualization.'''
         print('Refresh PC Reconstruction')
+        self._destroy_all_canvas()
         
         no_of_pcs = min(pp_score.shape)
         frame_count = pp_score.shape[0]  # Number of frames animation should last (lower number increases sweep speed)
@@ -1317,7 +1354,6 @@ class PCA_View(customtkinter.CTk):
             return np.concatenate(self.lines_reconstruction)
 
         # Set up the tk canvas
-        self._destroy_all_canvas()
         self.canvas_pc_reconstruction = FigureCanvasTkAgg(self.fig_pc_reconstruction, master=self.video_visualisation.tab('PC Reconstruction'))
         self.canvas_pc_reconstruction.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
         self.fig_pc_reconstruction.canvas.mpl_connect('motion_notify_event', self._synchronize_rotation)
@@ -1332,7 +1368,7 @@ class PCA_View(customtkinter.CTk):
         fs = self.controller.current_subj.sample_freq
         self.reconstruction_anim = animation.FuncAnimation(
             self.fig_pc_reconstruction, _animate, frames=frame_count,
-            init_func=_init_animation, repeat=True, blit=True, interval=1000/fs
+            init_func=_init_animation, repeat=True, blit=True, interval=1000 / fs
         )
 
         self.canvas_pc_reconstruction.draw()
@@ -1347,53 +1383,77 @@ class PCA_View(customtkinter.CTk):
         ax_3d.set_zlim(center[2] - min_max_range/2, center[2] + min_max_range/2)
 
 
-    def _show_eigenwalker_space(self):
+    def _show_eigenwalker_space(self, *args, **kwargs):
+        '''Visualise the Eigenwalker space reconstruction on a skeleton plot.'''
+        print('Refresh Eigenwalker Reconstruction')
+        self._destroy_all_canvas()
 
         self.controller.calc_eigenwalkers()
 
-        if self.controller.current_eigenwalker_group_id.get() == '':
+        if not self.controller.eigenwalker_pca_runs:
             return
         
-        template_subj, eigenwalker_pca = self.controller.eigenwalker_pca_runs.get(self.controller.current_eigenwalker_group_id.get())
-
-        df = template_subj.results
-        # TODO: Make this on a per TrojePCA basis VVVV
-        # if df.empty:
-        #     raise TerminatingError("No PCA results file paths found. Run analysis and save the project.")
-
-        self.eigenwalker_axes.cla()
-        self.slider_ax_1.cla()
-        self.slider_ax_2.cla()
+        wtype = self.eigenwalker_reconstruct_type.get().lower()
+        template_subj, eigenwalker_pca, projected_group_centres = self.controller.eigenwalker_pca_runs.get(self.controller.current_eigenwalker_population_id.get()).get(wtype)
 
         # INPUTS: W_0, V, K, num_of_eigenposture_features
         W_0 = eigenwalker_pca.W_0
         V = eigenwalker_pca.V
         K = eigenwalker_pca.K
+        
+        for i, (label, slider) in enumerate(zip(self.slider_labels, self.sliders)):
+            label.destroy()
+            slider.destroy()
+        num_sliders = min(V.shape[1], 15)
+        self.slider_vars = [tk.DoubleVar() for _ in range(num_sliders)]
+        self.slider_labels = [customtkinter.CTkLabel(self.eigenwalkers_subframe, text=f'PC{i + 1}') for i in range(num_sliders)]
+        self.sliders = [customtkinter.CTkSlider(self.eigenwalkers_subframe, from_=-1, to=1, variable=self.slider_vars[i]) for i in range(num_sliders)]
+        for i, (label, slider) in enumerate(zip(self.slider_labels, self.sliders)):
+            label.grid(row=i + 3, column=0, sticky='e', **self.grid_settings)
+            slider.grid(row=i + 3, column=1, sticky='ew', **self.grid_settings)
+
+        w_axes = self.eigenwalker_reconstruct_axes.get()
+        if w_axes == 'Eigenwalkers (PCs)':
+            self.custom_slider_label.configure(text_color=self.text_color_disabled)
+            self.custom_slider.configure(state='disabled', progress_color=('gray80', 'gray40'), button_color=self.checkbox_fg_color_disabled)
+            for label, slider in zip(self.slider_labels, self.sliders):
+                label.configure(text_color=self.text_color)
+                slider.configure(state='normal', progress_color=('gray40', '#AAB0B5'), button_color=('#3B8ED0', '#1F6AA5'))
+        else:
+            self.custom_slider_label.configure(text_color=self.text_color)
+            self.custom_slider.configure(state='normal', progress_color=('gray40', '#AAB0B5'), button_color=('#3B8ED0', '#1F6AA5'))
+            for label, slider in zip(self.slider_labels, self.sliders):
+                label.configure(text_color=self.text_color_disabled)
+                slider.configure(state='disabled', progress_color=('gray80', 'gray40'), button_color=self.checkbox_fg_color_disabled)
+        
+        df = template_subj.results
+
+        self.eigenwalker_axes.cla()
 
         if W_0.shape[0] == 0 or V.shape[0] == 0 or K.shape[0] == 0:
             raise TerminatingError('Unable to plot eigenwalkers. Run PCA.')
 
-        Vt = V.T
-        slider_1_value = 0.0
-        slider_2_value = 0.0
-
         min_slider_vals = np.min(K, axis=0)
         max_slider_vals = np.max(K, axis=0)
+        range_slider_vals = np.max(np.abs(K), axis=0)
+        for i, slider in enumerate(self.sliders):
+            if i < len(range_slider_vals):
+                slider.configure(from_=-range_slider_vals[i], to=range_slider_vals[i])
+            self.slider_vars[i].set(0)
+        self.custom_slider_var.set(0)
 
         # Adjust the subplots for the figure
         self.eigenwalker_figAnim3D.subplots_adjust(left=0.1, bottom=0.25)
-
-        slider_1 = Slider(self.slider_ax_1, 'PC 1', min_slider_vals[0], max_slider_vals[0], valinit=slider_1_value)
-        slider_2 = Slider(self.slider_ax_2, 'PC 2', min_slider_vals[1], max_slider_vals[1], valinit=slider_2_value)
 
         num_of_eigenposture_features = template_subj.results.loc['Loadings'].shape[0]
 
         # Initial plot
         bug_data = eigenwalker_pca.reconstruct(eigenwalker_pca.transform_k_to_w(np.zeros_like(V[0])), num_of_eigenposture_features,
                                                self.controller.configuration.get_freq,
-                                               float(df.loc['Normalisation Factor'].to_numpy()[0, 0]),
-                                               df.loc['Weight Vector'].to_numpy()[0],
-                                               self.controller.configuration.coordinate_transformation.get()
+                                               df.loc['Normalisation Factor'].to_numpy(dtype=float)[0, 0],
+                                               df.loc['Weight Vector'].to_numpy(dtype=float)[0],
+                                               self.controller.configuration.coordinate_transformation.get(),
+                                               wtype=wtype
                                             )
 
         self.current_full_skeleton = template_subj.skeleton
@@ -1412,13 +1472,35 @@ class PCA_View(customtkinter.CTk):
 
         def _animate(frame_number):
             '''Animate the bug movement.'''
-            k = np.array([slider_1.val, slider_2.val])
-            k = np.pad(k, (0, V.shape[1] - len(k)), 'constant')
+            if w_axes == 'Eigenwalkers (PCs)':
+                k = np.array([float(slider.get()) for slider in self.slider_vars])
+                k = np.pad(k, (0, max(0, V.shape[1] - len(k))), 'constant')
+                k = np.clip(k, min_slider_vals, max_slider_vals)
+
+                for i, label in enumerate(self.slider_labels):
+                    text_color = self.text_color_disabled if k[i] == min_slider_vals[i] or k[i] == max_slider_vals[i] else self.text_color
+                    label.configure(text=f"PC{i + 1} = {k[i]:.1f}", text_color=text_color)
+            else:
+                a, b = w_axes.split(" - ")
+                slider_val = self.custom_slider.get()
+                k = np.array(projected_group_centres[a] * abs(float(slider_val - 1)) + projected_group_centres[b] * float(slider_val + 1))
+                k = np.pad(k, (0, max(0, V.shape[1] - len(k))), 'constant')
+                text = ""
+                if slider_val < -0.25:
+                    text = a
+                elif slider_val > 0.25:
+                    text = b
+                self.custom_slider_label.configure(text=f"{text} {(float(slider_val) * 2):.1f}")
+                for i, label in enumerate(self.slider_labels):
+                    self.slider_vars[i].set(k[i])
+                    label.configure(text=f"PC{i + 1} = {k[i]:.1f}")
+
             bug_data = eigenwalker_pca.reconstruct(eigenwalker_pca.transform_k_to_w(k), num_of_eigenposture_features,
                                                self.controller.configuration.get_freq,
-                                               float(df.loc['Normalisation Factor'].to_numpy()[0, 0]),
-                                               df.loc['Weight Vector'].to_numpy()[0],
-                                               self.controller.configuration.coordinate_transformation.get()
+                                               float(df.loc['Normalisation Factor'].to_numpy(dtype=float)[0, 0]),
+                                               df.loc['Weight Vector'].to_numpy(dtype=float)[0],
+                                               self.controller.configuration.coordinate_transformation.get(),
+                                               wtype=wtype
                                             )
             coords = bug_data[frame_number % len(bug_data)].reshape(-1, 3)
             for i, (start, end) in enumerate(self.current_full_skeleton):
@@ -1429,18 +1511,17 @@ class PCA_View(customtkinter.CTk):
                     self.lines3[i].set_data(x_values, y_values)
                     self.lines3[i].set_3d_properties(z_values)
             
-            self.eigenwalker_figAnim3D.suptitle(f'[{self.controller.current_eigenwalker_group_id.get()}] Row: {frame_number % len(bug_data)}/{len(bug_data)}')
-            self.eigenwalker_figAnim3D.canvas.draw()
             return self.lines3
 
-        self._destroy_all_canvas()
-        self.eigenwalker_canvas = FigureCanvasTkAgg(self.eigenwalker_figAnim3D, master=self.eigenwalkers_subframe)
+        self.eigenwalker_figAnim3D.suptitle(f'{self.controller.current_eigenwalker_population_id.get()}: {wtype.title()}')
+        self.eigenwalker_canvas = FigureCanvasTkAgg(self.eigenwalker_figAnim3D, self.eigenwalkers_subframe2)
         self.eigenwalker_canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)#.grid(row=0, column=0, sticky='nsew', **self.grid_settings)
 
         # Create animation
-        anim3D = animation.FuncAnimation(
+        fs = self.controller.configuration.get_freq
+        self.eigenwalker_anim = animation.FuncAnimation(
             self.eigenwalker_figAnim3D, _animate, frames=10000,
-            init_func=_init_animation, repeat=True, blit=True, interval=0
+            init_func=_init_animation, repeat=True, blit=True, interval=1000 / fs
         )
 
         self.eigenwalker_canvas.draw()
@@ -1480,28 +1561,46 @@ class PCA_View(customtkinter.CTk):
 
     def _destroy_all_canvas(self):
         '''Destroy all canvas widgets.'''
-        if self.canvas_video_time_series:
-            self.canvas_video_time_series.get_tk_widget().destroy()
-        if self.canvas_pc_loadings:
-            self.canvas_pc_loadings.get_tk_widget().destroy()
-        if self.canvas_pc_reconstruction:
-            self.canvas_pc_reconstruction.get_tk_widget().destroy()
+        if self.bug_plot_anim:
+            self.bug_plot_anim.event_source.stop()
+            self.bug_plot_anim = None
         if self.canvas:
             self.canvas.get_tk_widget().destroy()
+
+        if self.time_series_anim:
+            self.time_series_anim.event_source.stop()
+            self.time_series_anim = None
+        if self.canvas_video_time_series:
+            self.canvas_video_time_series.get_tk_widget().destroy()
+
+        if self.loadings_anim:
+            self.loadings_anim.event_source.stop()
+            self.loadings_anim = None
+        if self.canvas_pc_loadings:
+            self.canvas_pc_loadings.get_tk_widget().destroy()
+
+        if self.reconstruction_anim:
+            self.reconstruction_anim.event_source.stop()
+            self.reconstruction_anim = None
+        if self.canvas_pc_reconstruction:
+            self.canvas_pc_reconstruction.get_tk_widget().destroy()
+
+        if self.eigenwalker_anim:
+            self.eigenwalker_anim.event_source.stop()
+            self.eigenwalker_anim = None
         if  self.eigenwalker_canvas:
             self.eigenwalker_canvas.get_tk_widget().destroy()
 
 
     def _update_subject_selection(self, switching_to_subject):
         if switching_to_subject and switching_to_subject != 'None' and switching_to_subject in self.controller.subj_pca_models:
-            print(f"Switching to {switching_to_subject}")
             self.subject_del_rows_entry.configure(textvariable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['rows_to_del'])
             self.subject_del_markers_entry.configure(textvariable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['markers_to_del'])
             self.subject_flip_x_checkbox.configure(variable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['flip_x'])
             self.subject_flip_y_checkbox.configure(variable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['flip_y'])
             self.subject_flip_z_checkbox.configure(variable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['flip_z'])
+            self.subject_eigenwalker_population_entry.configure(textvariable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['eigenwalker_population'])
             self.subject_eigenwalker_group_entry.configure(textvariable=self.controller.subj_pca_models[switching_to_subject].subject_UI_settings['eigenwalker_group'])
-            
             self.controller.change_current_subj(switching_to_subject)
 
 
@@ -1511,6 +1610,7 @@ class PCA_View(customtkinter.CTk):
         self.subject_flip_x_checkbox.configure(state=state)
         self.subject_flip_y_checkbox.configure(state=state)
         self.subject_flip_z_checkbox.configure(state=state)
+        self.subject_eigenwalker_population_entry.configure(state=state)
         self.subject_eigenwalker_group_entry.configure(state=state)
 
 
@@ -1525,6 +1625,12 @@ class PCA_View(customtkinter.CTk):
         
         for w in self.winfo_children():
             self._disable_widgets(w)
+
+        # Stop the bug plot animation
+        if self.bug_plot_anim:
+            self.bug_plot_anim.event_source.stop()
+            self.canvas.draw()
+            self.bug_plot_anim = None
             
 
     def finalise_ui(self):
@@ -1714,12 +1820,17 @@ class EntryPopup(tk.ttk.Entry):
     def _on_return(self, event):
         vals = self.tv.item(self.iid, 'values')
         vals = list(vals)
+        value_to_check = self.get()
         if self.column == 0 or self.column == 1:
-            vals[self.column] = self.get() if isfloat(self.get()) else 0.0  # Only allow floats
+            vals[self.column] = value_to_check if isfloat(value_to_check) else 0.0  # Only allow floats
         elif self.column == 2:
-            vals[self.column] = self.get() if isposint(self.get()) else ''  # Only allow ints
+            vals[self.column] = value_to_check if isposint(value_to_check) else ''  # Only allow ints
         else:
-            vals[self.column] = self.get() if is_color_like(self.get()) else '0'
+            if is_color_like(value_to_check):
+                vals[self.column] = value_to_check
+            else:
+                Warning(f"'{value_to_check}' cannot be interpreted as an RGB(A) color. See matplotlib.org/stable/users/explain/colors/colors.html for more details.")
+                vals[self.column] = '0'
 
         self.tv.item(self.iid, values=vals) # Update treeview item
         if self._event_callback:
@@ -1739,22 +1850,21 @@ class QuitDialog(customtkinter.CTkToplevel):
     '''
     def __init__(self, instance, return_action=False):
         super().__init__(instance)
-        
         self.return_action = return_action
         self.selected_action = 'cancel'
         self.instance = instance
-        
+
         # Center the dialog
         self.geometry('480x100+{}+{}'.format(
             self.instance.winfo_x() + self.instance.winfo_width() // 2 - 240,
             self.instance.winfo_y() + self.instance.winfo_height() // 2 - 50
         ))
-        
+
         self.focus_force()
         self.grid_columnconfigure(1, weight=1, minsize=100)
         self.grid_rowconfigure(0, weight=1, minsize=100)
         self.resizable(False, False)
-        
+
         # Update label text if a project is open
         label_text = 'Do you want to save changes?'
         if self.instance.controller.project_name:
@@ -1843,9 +1953,6 @@ def CreateToolTip(widget, text):
     widget.bind('<Enter>', enter)
     widget.bind('<Leave>', leave)
     return toolTip
-
-
-
 
 
 def isfloat(num):

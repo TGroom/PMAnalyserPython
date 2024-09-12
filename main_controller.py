@@ -12,11 +12,7 @@ Tested on Python 3.11.0 using:
     - matplotlib 3.8.3
 
 These packages need to be installed via pip:
-    pip install numpy
-    pip install scikit-learn
-    pip install customtkinter
-    pip install scipy
-    pip install matplotlib
+    pip install -r requirements.txt
     
 """
 import os
@@ -28,6 +24,7 @@ import time
 import gc
 from dataclasses import dataclass, field, fields
 import re
+import sys
 
 import pandas as pd
 import numpy as np
@@ -65,7 +62,6 @@ class Configuration:
     scaling: tk.StringVar = field(default_factory=tk.StringVar)
     tooltips: tk.BooleanVar = field(default_factory=tk.BooleanVar)
 
-    
     @property
     def get_delimiter(self):
         value = self.delimiter.get()
@@ -156,7 +152,6 @@ class Configuration:
             raise TerminatingError(f"Invalid format in 'PM Amplification Factors' entry '{value}'.")
         return value
 
-
     def set_all(self, dict):
         for field in fields(self):
             key = field.name  # Field name is the key
@@ -168,28 +163,12 @@ class Configuration:
             else:
                 print(f'Invalid format. Missing: {key}')
 
-    def _get_value(self, key):
-        field_value = getattr(self, key)
-        if isinstance(field_value, tk.StringVar):
-            value = field_value.get()
-        elif isinstance(field_value, (tk.BooleanVar, tk.IntVar)):
-            value = field_value.get()
-        else:
-            raise ValueError(f"Unsupported Tkinter variable type for field '{key}'")
 
-        # Dynamic property-based validation
-        if hasattr(self, f"get_{key}"):
-            value = getattr(self, f"get_{key}")  # Call the specific getter method
-
-        return value
-
-    def get(self):
+    def get_raw(self):
         dict = {}
         for field_name in vars(self):
-            try:
-                dict[field_name] = self._get_value(field_name)
-            except Exception as e:
-                print(f"Error retrieving value for '{field_name}': {e}")
+            field_value = getattr(self, field_name)
+            dict[field_name] = field_value.get()
 
         return dict
 
@@ -215,6 +194,7 @@ class Subject(pca_model.PCA_Model):
                     'flip_x': tk.BooleanVar(),
                     'flip_y': tk.BooleanVar(),
                     'flip_z': tk.BooleanVar(),
+                    'eigenwalker_population': tk.StringVar(),
                     'eigenwalker_group': tk.StringVar()
                 }
     
@@ -222,33 +202,27 @@ class Subject(pca_model.PCA_Model):
 class Controller():
     def __init__(self):
         '''Initialise the application with PCA backend processing.'''
-        #super().__init__()
-        self.subj_pca_models = {}  # Stores all subject specific data
         self.svd_model = pca_model.SVD()
         self.view = PCA_View(self)
-
         self.project_dir = ''
         self.project_name = ''
+        self.init_empty_project()
+
+    def init_empty_project(self):
+        self.subj_pca_models = {}
         self.data_file_path_list = []
         self.output_folder_path = ''
         self.current_subj = None
         self.g_weight = np.array([])
         self.g_centre_ref = np.array([])
-        self.g_skeleton = np.array([])
-        self.g_colour = np.array([])
+        self.g_skeleton = np.array([], dtype=object)
+        self.g_colour = np.array([], dtype=object)
         self.eigenwalker_pca_runs = {}
         self.current_subject_id = tk.StringVar()
-        self.current_eigenwalker_group_id = tk.StringVar()
+        self.current_eigenwalker_population_id = tk.StringVar()
         self.subject_UI_settings_dict = {}
         self.configuration = Configuration()
-
         self.view.setup_ui()
-
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        #os.chdir(script_dir)  # Change the current working directory to the script directory
-        print(f'Current script_dir: {script_dir}')
-        print(f'Current Working Directory: {os.path.abspath(os.getcwd())}')
-
 
     def run_analysis(self):
         '''Executes PCA processing when 'Run PCA' button is pushed, running in a separate thread.'''
@@ -278,31 +252,35 @@ class Controller():
 
     def _run_analysis_thread(self):
         '''Run PCA on the subject data based on selected options.'''
-
-        #self._sync_pca_with_ui()
-
-        self.open_data_files(self.data_file_path_list)
+        if not self.project_dir:
+            raise TerminatingError('Project must be saved before PCA can be run.')
         
-        self.check_ui_settings()
+        self.open_data_files(self.data_file_path_list, ask_open=False)
+
+        if not self.subj_pca_models:
+            raise TerminatingError('No data files provided.')
 
         self._sync_pca_with_ui()
 
         self._preprocess_subjects()
 
+        print(f'Saving results to: {self.output_folder_path}')
         if self.configuration.pca_mode.get() == 'All Subjects Together':
             self._apply_pca_all_subjects_together()
         else:
             self._apply_pca_separately()
 
+        self.calc_eigenwalkers()
+
         # Save a copy of the project file to record the state of the app used to generate the output
         self.save_project_file(
-            f'{self.output_folder_path}/{os.path.basename(self.project_dir).split(".")[0]}_metadata.txt'
+            f'{self.output_folder_path}/{self.project_name.split(".")[0]}_metadata.txt'
         )
 
 
     def _preprocess_subjects(self):
         '''Preprocess the data for each subject'''
-
+        total_steps = len(self.subj_pca_models.items())
         for i, (subject_id, subj_pca_model) in enumerate(self.subj_pca_models.items()):
             subj_pca_model.df = subj_pca_model.raw_data.copy()
             #print(subj_pca_model.markers_to_del_set)
@@ -319,12 +297,13 @@ class Controller():
                 'Cartesian to Spherical': (subj_pca_model.coordinate_transformation, self.configuration.coordinate_transformation.get()),
                 'Normalising, Weighting & Centring': (subj_pca_model.norm_weight_centre, subj_pca_model.func_order, self.configuration.weights_mode.get(), subj_pca_model.weights, self.configuration.normalisation.get(), subj_pca_model.centre_refs),
                 'Checking Data Formatting': (subj_pca_model.check_data_format, subject_id),
-                f'Preprocessing Complete: {subject_id}\n': (lambda *args: None, ())
+                #f'Preprocessing Complete: {subject_id}\n': (lambda *args: None, ())
             }
             
+            print_loading_bar(i, total_steps, f'{subject_id}')
             # Apply the transformations to the data
             for step_name, (transform_function, *args) in transformations.items():
-                print(f'{step_name:<45}', end='\r', flush=True)
+                #print(f'{step_name:<45}', end='\r', flush=True)
                 try:
                     transform_function(subj_pca_model.df, *args)
                 except Exception as e:
@@ -333,6 +312,8 @@ class Controller():
             preprocessed_path = f'{self.output_folder_path}/preprocessed/{subject_id.split(".")[0]}_preprocessed.csv'
             self.save_df_to_csv(preprocessed_path, subj_pca_model.df)
             self.view.progress_bar.set((i + 1) / (2 * len(self.subj_pca_models)))
+
+        print_loading_bar(100, 100, f'Preprocessed')
 
 
     def _apply_pca_all_subjects_together(self):
@@ -353,26 +334,29 @@ class Controller():
 
         press_naive, press_approx = pd.DataFrame(), pd.DataFrame()
         if self.configuration.loocv.get():
-            press_naive, press_approx = pca_model.loocv(merged_data.to_numpy(), 25, 500)
+            press_naive, press_approx = pca_model.loocv(merged_data.to_numpy(dtype=float), 25, 500)
 
+        total_steps = len(self.subj_pca_models.items())
         for i, (subj_preprocessed_data, (id, subj_pca_model)) in enumerate(zip(data_for_pca, self.subj_pca_models.items())):
-
-            self._process_and_save_pca_results(id, subj_pca_model, subj_preprocessed_data, press_naive, press_approx)
+            self._process_and_save_pca_results(subj_pca_model, subj_preprocessed_data, press_naive, press_approx)
             self.view.progress_bar.set(0.5 + ((i + 1) / (2 * len(self.subj_pca_models))))
-
+            print_loading_bar(i, total_steps, f'Saved: {os.path.basename(subj_pca_model.results_file_path)}')
+        print_loading_bar(100, 100, f'Saved')
 
     def _apply_pca_separately(self):
         '''Apply PCA separately for each subject's data.'''
-
+        total_steps = len(self.subj_pca_models.items())
         for i, (id, subj_pca_model) in enumerate(self.subj_pca_models.items()):
             self.svd_model.fit(subj_pca_model.df)  # Fit PCA separately for each subject's data
             
             press_naive, press_approx = pd.DataFrame(), pd.DataFrame()
             if self.configuration.loocv.get():
-                press_naive, press_approx = pca_model.loocv(subj_pca_model.df.to_numpy(), 25, 50)
+                press_naive, press_approx = pca_model.loocv(subj_pca_model.df.to_numpy(dtype=float), 25, 50)
 
-            self._process_and_save_pca_results(id, subj_pca_model, subj_pca_model.df, press_naive, press_approx)
+            self._process_and_save_pca_results(subj_pca_model, subj_pca_model.df, press_naive, press_approx)
             self.view.progress_bar.set(0.5 + ((i + 1) / (2 * len(self.subj_pca_models))))
+            print_loading_bar(i, total_steps, f'Saved: {os.path.basename(subj_pca_model.results_file_path)}')
+        print_loading_bar(100, 100, f'Saved')
 
 
     def merge_dataframes(self, data_to_combine):
@@ -391,9 +375,9 @@ class Controller():
         return pd.concat(data_to_combine, ignore_index=True) #merged_subject_data
     
 
-    def _process_and_save_pca_results(self, id, subj_pca_model, subj_preprocessed_data, press_naive, press_approx):
+    def _process_and_save_pca_results(self, subj_pca_model, subj_preprocessed_data, press_naive, press_approx):
         '''Process and save PCA results for a given subject.'''
-        print(f'{("Processing PCA Results"):<45}', end='\r', flush=True)
+        #print(f'{("Processing PCA Results"):<45}', end='\r', flush=True)
         try:
             results_df = subj_pca_model.postprocess_pca_results(
                 subj_preprocessed_data.columns,
@@ -407,157 +391,80 @@ class Controller():
                 self.configuration.get_pm_filter_cut_off,
                 np.array(self.configuration.get_freq_harmonics),
                 PRESS_Naive = press_naive,
-                PRESS_Approx = press_approx
+                PRESS_Approx = press_approx,
+                Group = pd.DataFrame([0.0], index=[subj_pca_model.subject_UI_settings['eigenwalker_group'].get()], columns=["PC1"])
                 # Add custom outputs as kwargs here ....
             )
             self.save_df_to_csv(subj_pca_model.results_file_path, results_df)
         except Exception as e:
             raise TerminatingError(str(e))
         
-        print(f'Results Saved: {os.path.basename(subj_pca_model.results_file_path)}')
+        #print(f'Results Saved: {os.path.basename(subj_pca_model.results_file_path)}')
 
 
     def calc_eigenwalkers(self):
 
-        groups = {}
+        if not self.subj_pca_models:
+            Warning(f"Cannot calculate Eigenwalker Space as there are no subjects.")
+            return
+
+        populations = {}
         for subj_id, subj_pca_model in self.subj_pca_models.items():
-            group_id = subj_pca_model.subject_UI_settings['eigenwalker_group'].get()
-            if group_id != '':
-                if group_id not in groups:
-                    groups[group_id] = []
-                groups[group_id].append(subj_pca_model)
+            population_id = subj_pca_model.subject_UI_settings['eigenwalker_population'].get()
+            if population_id == '':
+                population_id = "None"
+            if population_id not in populations:
+                populations[population_id] = []
+            populations[population_id].append(subj_pca_model)
+            #print(f'{population_id}: {subj_id}')
 
-                print(f'{group_id}: {subj_id}')
-
-        keys_to_remove = [group_id for group_id, group in groups.items() if len(group) <= 1]
+        keys_to_remove = [population_id for population_id, population in populations.items() if len(population) <= 1]
         for key in keys_to_remove:
-            groups.pop(key, None)
+            populations.pop(key, None)
 
-        group_ids = list(groups.keys())
-        self.view.eigenwalker_group_option_menu.configure(values=group_ids)
-        if self.view.eigenwalker_group_option_menu.get() not in group_ids:
-            self.view.eigenwalker_group_option_menu.set(group_ids[0])
+        population_ids = list(populations.keys())
+        self.view.eigenwalker_population_option_menu.configure(values=population_ids)
+
+        if self.view.eigenwalker_population_option_menu.get() not in population_ids:
+            self.view.eigenwalker_population_option_menu.set(population_ids[0])
 
         self.eigenwalker_pca_runs = {}
 
-        for group_id, group_subj_models in groups.items():
-            all_dfs_in_group = [model.results.copy() for model in group_subj_models if not model.results.empty]
-
+        unique_groups = set()
+        for population_id, population_subj_models in populations.items():
+            all_dfs_in_population = [model.results.copy() for model in population_subj_models if not model.results.empty]
+            self.eigenwalker_pca_runs[population_id] = {}
             for wtype in ['structural', 'dynamic', 'full']: # Order here is important
-                eigenwalker_pca_run = pca_model.TrojePCA(2)
-                W = eigenwalker_pca_run.preprocess(all_dfs_in_group, walker_type=wtype)
-                W_0, V, K, eigenvalues = eigenwalker_pca_run.fit_troje(W)
+                eigenwalker_pca_run = pca_model.EigenwalkerPCA(2)
+                W, groups, grouped_average_walker = eigenwalker_pca_run.preprocess(all_dfs_in_population, wtype=wtype)
+                eigenwalker_pca_run.fit_walkers(W)
                 eigenwalker_results = eigenwalker_pca_run.process_results(W)
+                eigenwalker_results = pd.concat([eigenwalker_results, pd.DataFrame({'PC1': groups}, index=[f'K_{i + 1}' for i in range(len(groups))])])
+                self.save_df_to_csv(f'{self.output_folder_path}/eigenwalkers/{population_id}_{wtype}.csv', eigenwalker_results)
+                
+                projected_group_centres = {key: eigenwalker_pca_run.project_walkers(value.reshape(1, -1)).flatten() for key, value in grouped_average_walker.items()}
+                self.eigenwalker_pca_runs[population_id][wtype] = (population_subj_models[0], eigenwalker_pca_run, projected_group_centres)
 
-                self.save_df_to_csv(f'{self.output_folder_path}/eigenwalkers/{group_id}_{wtype}.csv', eigenwalker_results)
-
-                '''for subj in group_subj_models:
-                    # Save reconstructed walking data
-                    num_eigen_features = subj.results.loc['Loadings'].shape[0]
-                    bug_data = eigenwalker_pca_run.reconstruct(..., num_eigen_features,
-                                                        self.configuration.get_freq,
-                                                        float(subj.results.loc['Normalisation Factor'].to_numpy()[0, 0]),
-                                                        subj.results.loc['Weight Vector'].to_numpy()[0],
-                                                        self.configuration.coordinate_transformation.get()
-                                                        )
-                    bug_data_df = pd.DataFrame(data=bug_data)
-                    self.save_df_to_csv(f'{self.output_folder_path}/eigenwalkers/{group_id}_{wtype}_{os.path.basename(subj.results_file_path)}', bug_data_df)
-                  '''  
-
-            self.eigenwalker_pca_runs[group_id] = (group_subj_models[0], eigenwalker_pca_run)
-
-            # Now calculate the structural and dynamic reconstruction results (this was used for the survey)
-            W_bar = eigenwalker_pca_run.W_0.T[0]
-
-            num_eigen_features = 102
-            num_subj = eigenwalker_pca_run.K.shape[1]
-
-            W_S = np.zeros((num_subj, 308)) # Structural Only
-
-            for i in range(num_subj):
-                W_S[i] = np.concatenate([W[i][:num_eigen_features], W_bar[num_eigen_features:]])
-            
-            W_D = np.zeros((num_subj, 308)) # Dynamic Only
-            for i in range(num_subj):
-                W_D[i] = np.concatenate([W_bar[:num_eigen_features], W[i][num_eigen_features:]])
-
-            # Save reconstructed walking data
-            for i, subj in enumerate(group_subj_models):
-                num_eigen_features = subj.results.loc['Loadings'].shape[0]
-                static_subj = eigenwalker_pca_run.reconstruct(W_S[i], num_eigen_features,
-                                            self.configuration.get_freq,
-                                            float(subj.results.loc['Normalisation Factor'].to_numpy()[0, 0]),
-                                            subj.results.loc['Weight Vector'].to_numpy()[0],
-                                            self.configuration.coordinate_transformation.get()
-                                            )
-                static_subj_df = pd.DataFrame(data=static_subj)
-                self.save_df_to_csv(f'{self.output_folder_path}/eigenwalkers/structural/structural_{group_id}_{os.path.basename(subj.results_file_path)}', static_subj_df)
-
-                static_subj = eigenwalker_pca_run.reconstruct(W_D[i], num_eigen_features,
-                                            self.configuration.get_freq,
-                                            float(subj.results.loc['Normalisation Factor'].to_numpy()[0, 0]),
-                                            subj.results.loc['Weight Vector'].to_numpy()[0],
-                                            self.configuration.coordinate_transformation.get()
-                                            )
-                static_subj_df = pd.DataFrame(data=static_subj)
-                self.save_df_to_csv(f'{self.output_folder_path}/eigenwalkers/dynamic/dynamic_{group_id}_{os.path.basename(subj.results_file_path)}', static_subj_df)
+                unique_groups.update(groups)
+        
+        group_combinations = list(itertools.combinations(list(unique_groups), 2))
+        formatted_combinations = [f"{a} - {b}" for a, b in group_combinations]
+        self.view.eigenwalker_reconstruct_axes_option_menu.configure(values=['Eigenwalkers (PCs)'] + formatted_combinations)
 
 
-        '''# Calculate static and dynamic reconstructions
-        front_full_path = dir + 'B/B1_ALL_pca_each_separately/eigenwalkers/Front_full.csv'
-        front_full_results = pd.read_csv(front_full_path, delimiter=',', header=0, index_col=0)
-        front_W_bar = front_full_results.loc['W_0']
+    def open_data_files(self, file_paths=[], ask_open=True):
+        '''Open and process subject files, updating the file path label and table.'''
 
-        hind_full_path = dir + 'B/B1_ALL_pca_each_separately/eigenwalkers/Hind_full.csv'
-        hind_full_results = pd.read_csv(hind_full_path, delimiter=',', header=0, index_col=0)
-        hind_W_bar = hind_full_results.loc['W_0']
-
-        num_eigen_features = 102
-
-        # Front
-        W_F_S = np.zeros((10, 308)) # Static Only
-        for i in range(10):
-            W_F_S[i] = pd.concat([front_full_results.loc[f'W_{i + 1}'][0:num_eigen_features], front_W_bar[num_eigen_features:]])
-
-        # Front
-        W_F_D = np.zeros((10, 308)) # Dynamic Only
-        for i in range(10):
-            W_F_D[i] = pd.concat([front_W_bar[0:num_eigen_features], front_full_results.loc[f'W_{i + 1}'][num_eigen_features:]])
-
-        # Hind
-        W_H_S = np.zeros((24, 308)) # Static Only
-        for i in range(24):
-            W_H_S[i] = pd.concat([hind_full_results.loc[f'W_{i + 1}'][0:num_eigen_features], hind_W_bar[num_eigen_features:]])
-
-        # Hind
-        W_H_D = np.zeros((24, 308)) # Dynamic Only
-        for i in range(24):
-            W_H_D[i] = pd.concat([hind_W_bar[0:num_eigen_features], hind_full_results.loc[f'W_{i + 1}'][num_eigen_features:]])'''
-
-
-
-    def check_ui_settings(self):
-        if not self.project_dir:
-            raise TerminatingError('Project must be saved before PCA can be run.')
-
-        if not self.subj_pca_models:
-            raise TerminatingError('No data files provided.')
-    
-
-    def open_data_files(self, file_paths=[]):
-        '''
-        Open and process subject files, updating the file path label and table.
-        '''
-
-        if not file_paths:
+        if not file_paths and ask_open:
             file_paths = self.view._ask_open_filenames()
-            print(file_paths)
 
         if file_paths:
             if self.project_dir:
                 self.data_file_path_list = self.global_to_local(file_paths)
             else:
                 self.data_file_path_list = file_paths
+
+        #print(self.data_file_path_list)
 
         # If there are any missing files, issue a single warning
         missing_files = [file_path for file_path in self.data_file_path_list if not os.path.exists(file_path)]
@@ -570,6 +477,10 @@ class Controller():
         if not self.data_file_path_list:
             return
 
+        # Store UI settings from existing subjects
+        for i, (subject_id, subj_pca_model) in enumerate(self.subj_pca_models.items()):
+            self.subject_UI_settings_dict[subject_id] = {sub_key: sub_value.get() for sub_key, sub_value in subj_pca_model.subject_UI_settings.items()}
+        
         # Update subject selection dropdown and related attributes.
         self.view.update_file_path_label(self.data_file_path_list)
         subject_basenames = [os.path.basename(path) for path in self.data_file_path_list]
@@ -583,7 +494,6 @@ class Controller():
         for item in self.view.table.get_children():
             self.view.table.delete(item)
 
-        # Initialise all the PCASubject objects
         self.subj_pca_models = {}  # Clear existing subject PCAs
         for i, id in enumerate(subject_basenames):
             raw_data = pd.read_csv(self.data_file_path_list[i], delimiter=self.configuration.get_delimiter or None, header=0)
@@ -597,7 +507,7 @@ class Controller():
                 
                 if len(markers) < 1:
                     raise TerminatingError("No 3D marker data found in the input (missing columns ending with x, y, z). The number of markers must be greater than 0.")
-                
+            
             self.subj_pca_models[id] = Subject(raw_data.loc[:, np.concatenate(markers)], self.configuration.get_freq)
 
             if id in self.subject_UI_settings_dict:
@@ -608,6 +518,7 @@ class Controller():
                     'flip_x': tk.BooleanVar(value=saved_settings.get('flip_x', False)),
                     'flip_y': tk.BooleanVar(value=saved_settings.get('flip_y', False)),
                     'flip_z': tk.BooleanVar(value=saved_settings.get('flip_z', False)),
+                    'eigenwalker_population': tk.StringVar(value=saved_settings.get('eigenwalker_population', '')),
                     'eigenwalker_group': tk.StringVar(value=saved_settings.get('eigenwalker_group', ''))
                 }
 
@@ -621,6 +532,11 @@ class Controller():
             parent_text = f'{i:<5} {marker[0][:-1]}({children_suffixes})'
             self.view.table.insert('', tk.END, text=parent_text, values=('1.0', '0.0', '', '0'), iid=i, open=False, tags=(str(i),))
 
+        self.g_weight = np.pad(self.g_weight, (0, max(0, len(markers) - len(self.g_weight))), mode='constant', constant_values=1.0)
+        self.g_centre_ref = np.pad(self.g_centre_ref, (0, max(0, len(markers) - len(self.g_centre_ref))), mode='constant', constant_values=0.0)
+        self.g_skeleton = np.pad(self.g_skeleton, (0, max(0, len(markers) - len(self.g_skeleton))), mode='constant', constant_values="")
+        self.g_colour = np.pad(self.g_colour, (0, max(0, len(markers) - len(self.g_colour))), mode='constant', constant_values="0")
+
         for i in range(len(markers)):
             self.view.table.set(i, '#1', self.g_weight[i])
             self.view.table.set(i, '#2', self.g_centre_ref[i])
@@ -633,12 +549,36 @@ class Controller():
     def set_table_vars(self):
         self.g_weight = np.array(self.view._get_table_values('weights')) #np.array([w for i, w in enumerate(self.view._get_table_values('weights')) if i not in list(subj_pca_model.markers_to_del_set)])
         self.g_centre_ref = np.array(self.view._get_table_values('centre_ref'))
-        self.g_skeleton = np.array(self.view._get_table_values('skeleton'))
-        self.g_colour = np.array(self.view._get_table_values('colour'))
+        self.g_skeleton = np.array(self.view._get_table_values('skeleton'), dtype=object)
+        self.g_colour = np.array(self.view._get_table_values('colour'), dtype=object)
 
 
     def global_to_local(self, global_file_paths):
         return [os.path.relpath(path, self.project_dir) for path in global_file_paths]
+
+
+    def new_project_file(self):
+        if self.project_dir:
+            if self.view._on_closing(return_action=True) == 'cancel':
+                return
+            
+        project_file_path = self.view._ask_save_as_filename()
+        if not project_file_path:
+            return
+        
+        if not project_file_path.endswith('.pca'):
+            project_file_path += '.pca'
+
+        self.project_dir = os.path.dirname(project_file_path)
+        self.project_name = os.path.basename(project_file_path)
+
+        os.chdir(self.project_dir)  # Switch to project's working directory for local paths
+        print(f'Working Directory: {self.project_dir}')
+
+        self.init_empty_project()
+
+        save_path = os.path.join(self.project_dir, self.project_name)
+        self.save_project_file(save_path)
 
 
     def save_project_file(self, save_path=None):
@@ -660,10 +600,13 @@ class Controller():
                 self.project_name = os.path.basename(project_file_path)
 
             save_path = os.path.join(self.project_dir, self.project_name)
-            self.view.title(f'PMAnalyserPython [{self.project_name}]')
+        self.view.title(f'PMAnalyserPython [{self.project_name}]')
+
+        os.chdir(self.project_dir)  # Switch to project's working directory for local paths
+        print(f'Working Directory: {self.project_dir}')
             
         # Gather project data into a dictionary
-        project_dict = self.configuration.get()
+        project_dict = self.configuration.get_raw()
 
         # Additional settings to save
         project_dict['project_name'] = self.project_name
@@ -691,7 +634,8 @@ class Controller():
         If no file is specified, prompt the user to choose one.
         '''
         if self.project_dir:
-            self.view._on_closing(return_action=True)
+             if self.view._on_closing(return_action=True) == 'cancel':
+                return
 
         if not project_to_open:
             project_to_open = self.view._ask_open_filename()
@@ -725,7 +669,7 @@ class Controller():
 
         self.subject_UI_settings_dict = loaded_project_dict.get('subject_UI_settings_dict', {})
 
-        self.open_data_files(self.data_file_path_list)
+        self.open_data_files(self.data_file_path_list, ask_open=False)
         
         self.view.update_appearance()
         self.view.update_scaling()
@@ -976,12 +920,6 @@ def _unique_transform(arr):
     '''
     Transforms a numpy array such that all unique values are mapped to a contiguous range starting from 0.
     This allows removal of items from the skeleton array while maintining the correct indexing for the marker columns.
-    
-    Args:
-    - arr (numpy.ndarray): Input array to be transformed.
-
-    Returns:
-    - numpy.ndarray: Transformed array with values replaced by their mapped indices.
     '''
     flat_arr = arr.flatten()
     unique_values = np.unique(flat_arr)  # Get unique values
@@ -990,6 +928,14 @@ def _unique_transform(arr):
     transformed_arr = transformed_flat_arr.reshape(arr.shape)  # Reshape back to original shape
     return transformed_arr
 
+
+def print_loading_bar(iteration, total, task_name, length=30):
+    percent = (iteration / total) * 100
+    filled_length = int(length * iteration // total)
+    bar = '█' * filled_length + '-' * (length - filled_length)
+    print(f'\r|{bar}| {percent:.1f}% Complete - {task_name:<25}', end='\r')
+    if iteration == total:
+        print()
 
 
 if __name__ == '__main__':
