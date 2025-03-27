@@ -6,7 +6,7 @@ import pandas as pd
 from scipy import optimize
 from scipy import signal
 from scipy.linalg import svd
-
+import matplotlib.pyplot as plt
 
 class SVD:
     def __init__(self):
@@ -996,7 +996,7 @@ class TimeSeriesMetrics:
         
         Source: https://stackoverflow.com/questions/16716302/how-do-i-fit-a-sine-curve-to-my-data-with-pylab-and-numpy
         '''
-        cutoff = 2
+        cutoff = 1
         yy = np.array(yy)
         tt = np.linspace(0, len(yy) / self.sample_freq, len(yy))
         guess_amp = np.std(yy) * np.sqrt(2)
@@ -1092,8 +1092,7 @@ class EigenwalkerPCA(SVD):
             phi += np.pi * flip_pcx
 
             # Take Phi out here if only Eigenwalker consistency matters
-
-            amplitudes, phi = flip_amp_with_phi(amplitudes, phi)
+            #amplitudes, phi = flip_amp_with_phi(amplitudes, phi)
 
             # Absorb the amplitude into the loadings and concatenate the mean posture
             p = (Vt.T * amplitudes[:, np.newaxis]).ravel()
@@ -1146,10 +1145,14 @@ class EigenwalkerPCA(SVD):
     def transform_k_to_w(self, k):
         return self.W_0.reshape(-1) + np.dot(k, self.V.T)
 
-    def reconstruct(self, w, num_of_eigenposture_features, sample_freq, d_norm, weight_vec, coord_transform, wtype='full'):
+    def reconstruct(self, w, num_of_eigenposture_features, sample_freq, d_norm, weight_vec, coord_transform, wtype='full', average_walker=None):
         #print(w.shape)
         #print(num_of_eigenposture_features * (self.num_PCs_to_use + 1))
-        temp = self.average_walker.copy()
+        if average_walker is None:
+            temp = self.average_walker.copy()
+        else:
+            temp = np.asarray(average_walker)
+
         if wtype == 'structural':
             temp[:len(w)] = w
             w = temp
@@ -1162,8 +1165,7 @@ class EigenwalkerPCA(SVD):
         mean_posture, eigenpostures = eigenpostures[0], eigenpostures[1:]
         phis = np.insert(w[-self.num_PCs_to_use:-1], 0, 0.0)
         omega = w[-1]
-
-        tt = np.arange(0, 2*np.pi/omega, 0.01)
+        tt = np.arange(0, 2*np.pi/omega, 1.0/sample_freq)
         scores = np.array([np.sin(tt * omega + phi) for phi in phis])
 
         pca = PCA_Model(sample_freq)
